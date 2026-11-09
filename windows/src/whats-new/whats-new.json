@@ -2,6 +2,46 @@
  "about": "What's new, shown once in the island after hi-wings updates itself (src/whats-new/). Every Windows and Linux release adds its entry here, in the 14 languages: 1 to 4 items, a short title and one line each, an icon from scripts/test-whats-new.py. python3 scripts/test-whats-new.py checks it.",
  "releases": [
   {
+   "version": "0.6.2",
+   "items": [
+    {
+     "icon": "paint",
+     "title": {
+      "en": "Wings at every size",
+      "fr": "Des ailes à toutes les tailles",
+      "es": "Alas en todos los tamaños",
+      "pt-BR": "Asas em todos os tamanhos",
+      "de": "Flügel in jeder Größe",
+      "tr": "Her boyutta kanatlar",
+      "id": "Sayap di segala ukuran",
+      "ru": "Крылья в любом размере",
+      "zh-Hans": "任何尺寸都有翅膀",
+      "ja": "どの大きさでも翼が見える",
+      "ko": "모든 크기에서 날개가 보입니다",
+      "hi": "हर आकार में पंख",
+      "bn": "সব মাপে ডানা",
+      "ar": "أجنحة في كل حجم"
+     },
+     "detail": {
+      "en": "The icon kept its wings only when shown large: the shortcut and the taskbar showed none.",
+      "fr": "L'icône ne gardait ses ailes qu'en grand : le raccourci et la barre des tâches n'en montraient aucune.",
+      "es": "El icono conservaba las alas solo en grande: el acceso directo y la barra no mostraban ninguna.",
+      "pt-BR": "O ícone só mantinha as asas em tamanho grande: o atalho e a barra não mostravam nenhuma.",
+      "de": "Das Symbol behielt seine Flügel nur groß: Verknüpfung und Taskleiste zeigten keine.",
+      "tr": "Simge kanatlarını yalnızca büyükken koruyordu: kısayol ve görev çubuğu hiç göstermiyordu.",
+      "id": "Ikon hanya menyimpan sayapnya saat besar: pintasan dan bilah tugas tak menampilkannya.",
+      "ru": "Значок сохранял крылья только в большом размере: на ярлыке и панели их не было.",
+      "zh-Hans": "图标只在放大时才保留翅膀：快捷方式和任务栏上一只也看不到。",
+      "ja": "アイコンは大きいときだけ翼が残り、ショートカットやタスクバーでは消えていました。",
+      "ko": "아이콘은 크게 볼 때만 날개가 남고, 바로 가기와 작업 표시줄에서는 보이지 않았습니다.",
+      "hi": "आइकन बड़े आकार में ही पंख रखता था: शॉर्टकट और टास्कबार में कोई नहीं दिखता था।",
+      "bn": "আইকন কেবল বড় মাপেই ডানা রাখত: শর্টকাট ও টাস্কবারে কিছুই দেখা যেত না।",
+      "ar": "كانت الأيقونة تحتفظ بجناحيها في الحجم الكبير فقط، ولا يظهر أي منهما في الاختصار وشريط المهام."
+     }
+    }
+   ]
+  },
+  {
    "version": "0.6.1",
    "items": [
     {

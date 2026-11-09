@@ -7,6 +7,16 @@ Everything below the horizontal rule is Coucou's own history, kept as it is:
 it is the history of the code hi-wings inherited, and the names in it are the
 contributors who wrote that code.
 
+### 0.6.2 — unreleased
+
+- **The icon keeps its wings at every size.** It was drawn to survive only
+  large: the wing was nearly white and its outline grown by a fixed ratio, so
+  it measured eight pixels at 512 and a third of a pixel at 32, where it
+  averaged into the white. The shortcut and the taskbar showed a wingless
+  creature while the installer showed a winged one — from the same file. The
+  outline is now about a pixel wide at every size, and below 72 pixels the
+  wing becomes one solid slate mark instead of a pale shape with an edge.
+
 ### 0.6.1
 
 - **Hold the dictation key to ask.** A switch in Settings turns dictation's own
