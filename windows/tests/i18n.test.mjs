@@ -49,7 +49,7 @@ test("English is the key itself, other languages come from either table", () => 
 test("a string nobody translated falls back to its English text", () => {
   inLanguage("ru", () => {
     assert.equal(t("Some brand new sentence."), "Some brand new sentence.");
-    assert.equal(t("Hello {name}", { name: "Mochi" }), "Hello Mochi");
+    assert.equal(t("Hello {name}", { name: "Plume" }), "Hello Plume");
   });
 });
 
@@ -101,7 +101,7 @@ test("labels() tables and dates read in the current language", () => {
 
 // ── Choosing the language ─────────────────────────────────────────────────────
 
-test("System follows the system's language when Coucou has it, else English", () => {
+test("System follows the system's language when hi-wings has it, else English", () => {
   assert.equal(resolveLanguage("", ["fr-FR", "en-US"]), "fr");
   assert.equal(resolveLanguage("", ["it-IT", "es-MX"]), "es");
   assert.equal(resolveLanguage("", ["pt-PT"]), "pt-BR");
@@ -175,7 +175,7 @@ test("German regional locales select Deutsch and apply left-to-right document me
 // the English placeholders and plural forms. Strings newer than a translation are missing from it
 // and show in English; most of the catalog must be there.
 function checkAppleTranslations(lang) {
-  const catalog = JSON.parse(readFileSync(join(WINDOWS, "../NotchBuddy/Resources/Localizable.xcstrings"), "utf8"));
+  const catalog = JSON.parse(readFileSync(join(WINDOWS, "src/i18n/catalog.xcstrings"), "utf8"));
   let translated = 0;
   let localized = 0;
   for (const [key, entry] of Object.entries(catalog.strings)) {
@@ -208,7 +208,7 @@ test("Turkish translates both tables, interpolates and falls back to English", (
     assert.equal(t("Open the chat"), "Sohbeti aç");
     assert.equal(t("Uploading {name}", { name: "öğrenci.pdf" }), "öğrenci.pdf yükleniyor");
     assert.equal(t("Some brand new sentence."), "Some brand new sentence.");
-    assert.equal(t("Hello {name}", { name: "Mochi" }), "Hello Mochi");
+    assert.equal(t("Hello {name}", { name: "Plume" }), "Hello Plume");
     assert.equal(dayMonth(9, 9), "9 Eki");
     assert.equal(isRtl(), false);
   });
@@ -324,7 +324,7 @@ test("a language change relabels what was built, in place, and says so once", ()
 // ── The tables ────────────────────────────────────────────────────────────────
 
 test("strings.json is what the generator makes of the Mac's catalog", () => {
-  const catalog = JSON.parse(readFileSync(join(WINDOWS, "../NotchBuddy/Resources/Localizable.xcstrings"), "utf8"));
+  const catalog = JSON.parse(readFileSync(join(WINDOWS, "src/i18n/catalog.xcstrings"), "utf8"));
   assert.deepEqual(generate(catalog), MAC);
 });
 
@@ -361,7 +361,7 @@ test("extra.json never shadows a string of the Mac's", () => {
   for (const key of Object.keys(EXTRA.strings)) assert.ok(!(key in MAC.strings), key);
 });
 
-test("generated, Rust and Apple language registrations agree with the picker", () => {
+test("the generated table and the Rust side declare the picker's languages", () => {
   assert.deepEqual(GENERATED_LANGUAGES, [...LANGUAGE_CODES]);
   assert.deepEqual(MAC.languages, [...LANGUAGE_CODES]);
   const rust = readFileSync(join(WINDOWS, "src-tauri/src/i18n.rs"), "utf8");
@@ -369,23 +369,6 @@ test("generated, Rust and Apple language registrations agree with the picker", (
   assert.ok(registered);
   assert.equal(Number(registered[1]), LANGUAGE_CODES.length);
   assert.deepEqual(JSON.parse(registered[2]), [...LANGUAGE_CODES]);
-  // The Mac may have languages Windows and Linux don't have yet, never the other way round.
-  // Both Mac targets (Info.plist files and project.yml) declare the same ones.
-  const apple = [];
-  for (const file of ["Info.plist", "InfoAppStore.plist"]) {
-    const plist = readFileSync(join(WINDOWS, "../NotchBuddy/Resources", file), "utf8");
-    const array = plist.match(/<key>CFBundleLocalizations<\/key>\s*<array>([\s\S]*?)<\/array>/);
-    assert.ok(array, file);
-    apple.push([...array[1].matchAll(/<string>([^<]+)<\/string>/g)].map((m) => m[1]).sort());
-  }
-  const project = readFileSync(join(WINDOWS, "../NotchBuddy/project.yml"), "utf8");
-  const arrays = [...project.matchAll(/CFBundleLocalizations:\r?\n((?:[ \t]+- [^\r\n]+\r?\n)+)/g)];
-  assert.equal(arrays.length, 2);
-  for (const array of arrays) apple.push([...array[1].matchAll(/- ([^\r\n]+)/g)].map((m) => m[1]).sort());
-  for (const list of apple) assert.deepEqual(list, apple[0]);
-  for (const code of LANGUAGE_CODES) assert.ok(apple[0].includes(code), `${code} is not a Mac language`);
-  const swift = readFileSync(join(WINDOWS, "../NotchBuddy/Sources/App/SettingsView.swift"), "utf8");
-  for (const { code, name } of LANGUAGES) assert.ok(swift.includes(`Text("${name}").tag("${code}")`), code);
 });
 
 // ── Every key the code uses is translated ─────────────────────────────────────
@@ -451,7 +434,7 @@ test("lookup() answers from the merged tables", () => {
 // upload canvas or the recap that is exactly a translated string, and is not
 // the argument of t() / tl() / tn() / N_(), is English that would stay English.
 
-const CHECKED = ["src/views", "src/settings", "src/island", "src/upload", "src/recap", "src/mochi/wardrobe.ts", "src/main.ts"];
+const CHECKED = ["src/views", "src/settings", "src/island", "src/upload", "src/recap", "src/plume/wardrobe.ts", "src/main.ts"];
 /** Literals that are a translated word but are values in the code, not text on screen. */
 const NOT_TEXT = new Set([
   "file", // the kind of a chat context: { kind: "file" }

@@ -1,13 +1,13 @@
-//! coucou-hook — the relay Claude Code (and every other agent) runs on each hook
+//! hiwings-hook — the relay Claude Code (and every other agent) runs on each hook
 //! event.
 //!
 //! Reads the hook JSON on stdin, maps the agent's event and field names onto
 //! Claude Code's (normalize.rs), adds a little terminal context, and hands it to
-//! Coucou over the named pipe `\\.\pipe\coucou-<sid>` (Windows) or the Unix
-//! socket `$XDG_RUNTIME_DIR/coucou.sock` (Linux).
+//! hi-wings over the named pipe `\\.\pipe\hiwings-<sid>` (Windows) or the Unix
+//! socket `$XDG_RUNTIME_DIR/hiwings.sock` (Linux).
 //!
 //! Hard rule (docs/CLAUDE.md): **never block the agent.**
-//! * If the pipe does not exist — Coucou is closed — we exit 0 immediately, with
+//! * If the pipe does not exist — hi-wings is closed — we exit 0 immediately, with
 //!   only the "no opinion" reply the agent expects (reply.rs), and the session
 //!   carries on untouched.
 //! * Every step runs under a deadline enforced by the main thread, so a pipe that
@@ -15,16 +15,16 @@
 //!   either: we abandon the worker and exit.
 //! * Only `PermissionRequest` waits for an answer, because approving from the
 //!   island is the whole point. No answer means no decision, and the agent asks
-//!   in its terminal exactly as if Coucou were not installed.
+//!   in its terminal exactly as if hi-wings were not installed.
 //! * Antigravity's `PreToolUse` is the one exception: Antigravity has no
-//!   permission request and waits for this hook's decision instead. Coucou
+//!   permission request and waits for this hook's decision instead. hi-wings
 //!   answers `ask` at once, or `pending` when the island shows the command
 //!   (Approve commands from the notch) and then the click. 3 s for the first
 //!   line, 115 s for the click; anything else prints "ask" (reply.rs).
 //!
-//! Usage: `coucou-hook [--agent <name>] [<EventName>]` (the event name is also
+//! Usage: `hiwings-hook [--agent <name>] [<EventName>]` (the event name is also
 //! read from the JSON; `--agent` is absent for Claude Code), or
-//! `coucou-hook --statusline` as Claude Code's status line command (plan usage,
+//! `hiwings-hook --statusline` as Claude Code's status line command (plan usage,
 //! see statusline.rs): it passes the plan limits on and runs the status line the
 //! user had before, so that keeps working.
 
@@ -43,12 +43,12 @@ const CONNECT_TIMEOUT: Duration = Duration::from_millis(300);
 const FIRE_AND_FORGET_BUDGET: Duration = Duration::from_secs(2);
 /// How long a permission prompt may stay on screen before the terminal takes over.
 const DECISION_BUDGET: Duration = Duration::from_secs(110);
-/// Antigravity's PreToolUse: how long Coucou has to say `ask` or `pending`, and how
-/// long a card may then wait for a click (Coucou gives up first, at 110 s; the hook
+/// Antigravity's PreToolUse: how long hi-wings has to say `ask` or `pending`, and how
+/// long a card may then wait for a click (hi-wings gives up first, at 110 s; the hook
 /// is installed with 120 s). The Mac relay's numbers.
 const AGY_FIRST_LINE_BUDGET: Duration = Duration::from_secs(3);
 const AGY_DECISION_BUDGET: Duration = Duration::from_secs(115);
-/// What Coucou writes once the card is up.
+/// What hi-wings writes once the card is up.
 const PENDING: &str = "pending";
 /// How often a waiting relay checks that the process that ran it is still there.
 const PARENT_POLL: Duration = Duration::from_millis(100);
@@ -171,9 +171,9 @@ fn main() {
 
 /// What the worker tells the main thread.
 enum Msg {
-    /// Coucou shows a card: wait for the click (Antigravity).
+    /// hi-wings shows a card: wait for the click (Antigravity).
     Pending,
-    /// The worker is done: Coucou's answer, if any.
+    /// The worker is done: hi-wings's answer, if any.
     Answer(Option<String>),
 }
 
@@ -218,7 +218,7 @@ fn prepare(raw: &[u8], args: &Args, env: &dyn Fn(&str) -> Option<String>, cwd: &
     // unchanged; invalid names are discarded by the app, not here. A Claude Code
     // session started from the Claude desktop app is tagged `claude-desktop`.
     if let Some(tag) = agent_tag(&args.agent, env) {
-        map.insert("coucou_agent".into(), Value::String(tag));
+        map.insert("hiwings_agent".into(), Value::String(tag));
     }
     // Claude Code in Cursor's terminal goes on the Cursor pill (Mac #120).
     if !map.contains_key("term_editor") {
@@ -247,18 +247,18 @@ fn prepare(raw: &[u8], args: &Args, env: &dyn Fn(&str) -> Option<String>, cwd: &
 
     add_terminal_context(map, env);
 
-    // Antigravity's PreToolUse waits for Coucou (reply.rs): tagged so the app knows
+    // Antigravity's PreToolUse waits for hi-wings (reply.rs): tagged so the app knows
     // this relay reads its answer. A command too long to forward whole is flagged,
     // so the island never asks about one nobody could read in full.
     if reply::waits_on_pre_tool(&args.agent, &name) {
-        map.insert("coucou_kind".into(), Value::String("agy_pre_tool".into()));
+        map.insert("hiwings_kind".into(), Value::String("agy_pre_tool".into()));
         let long = map
             .get("tool_input")
             .and_then(|i| i.get("command"))
             .and_then(Value::as_str)
             .is_some_and(|c| c.len() > MAX_FIELD_LEN);
         if long {
-            map.insert("coucou_command_cut".into(), Value::Bool(true));
+            map.insert("hiwings_command_cut".into(), Value::Bool(true));
         }
     }
 
@@ -277,7 +277,7 @@ fn prepare(raw: &[u8], args: &Args, env: &dyn Fn(&str) -> Option<String>, cwd: &
     Some(Event { line, name, question })
 }
 
-/// Which terminal the session runs in. Unlike macOS, Coucou here accepts events
+/// Which terminal the session runs in. Unlike macOS, hi-wings here accepts events
 /// from every terminal, so this is context only — never a filter.
 fn add_terminal_context(map: &mut Map<String, Value>, env: &dyn Fn(&str) -> Option<String>) {
     for (key, var) in [
@@ -297,7 +297,7 @@ fn add_terminal_context(map: &mut Map<String, Value>, env: &dyn Fn(&str) -> Opti
     }
 }
 
-/// The `coucou_agent` tag: `--agent` when given, otherwise `claude-desktop` for
+/// The `hiwings_agent` tag: `--agent` when given, otherwise `claude-desktop` for
 /// a Claude Code session started from the Claude desktop app, which says so in
 /// CLAUDE_CODE_ENTRYPOINT — the same rule as the Mac's relay (#191). Nothing
 /// for a plain Claude Code session.
@@ -323,7 +323,7 @@ fn term_editor(env: &dyn Fn(&str) -> Option<String>) -> Option<&'static str> {
 
 /// Caps the strings of a payload: every field to MAX_FIELD_LEN, except the edit
 /// strings of a finished Edit / MultiEdit / Write, which the live diff needs
-/// whole. If even those had to be cut, `coucou_diff_truncated` tells the island
+/// whole. If even those had to be cut, `hiwings_diff_truncated` tells the island
 /// not to show counts it cannot trust.
 fn truncate_payload(payload: &mut serde_json::Value, event: &str) {
     let keeps_diff = event == "PostToolUse"
@@ -346,7 +346,7 @@ fn truncate_payload(payload: &mut serde_json::Value, event: &str) {
         if let Some(map) = payload.as_object_mut() {
             map.insert("tool_input".into(), input);
             if cut_any {
-                map.insert("coucou_diff_truncated".into(), serde_json::Value::Bool(true));
+                map.insert("hiwings_diff_truncated".into(), serde_json::Value::Bool(true));
             }
         }
     }
@@ -426,7 +426,7 @@ fn talk(payload: &str, waits_for_answer: bool, pending: &dyn Fn()) -> Option<Str
     read_answer(&mut pipe, pending)
 }
 
-/// The first line from Coucou that is not `pending`, trimmed; None when the
+/// The first line from hi-wings that is not `pending`, trimmed; None when the
 /// connection ends without one.
 fn read_answer(pipe: &mut impl Read, pending: &dyn Fn()) -> Option<String> {
     let mut buf = Vec::new();
@@ -526,7 +526,7 @@ mod tests {
     fn claude_code_payloads_are_forwarded_as_they_are() {
         let (v, ev) = run(r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","cwd":"/p"}"#, "", "PreToolUse");
         assert_eq!(ev.name, "PreToolUse");
-        assert!(v.get("coucou_agent").is_none());
+        assert!(v.get("hiwings_agent").is_none());
         assert_eq!(v["cwd"], "/p");
         assert_eq!(v["tool_name"], "Bash");
     }
@@ -537,7 +537,7 @@ mod tests {
         let (v, ev) = run(r#"{"hook_event_name":"BeforeTool","toolCall":{"name":"shell","args":{"CommandLine":"ls"}}}"#, "gemini", "PreToolUse");
         assert_eq!(ev.name, "PreToolUse");
         assert_eq!(v["hook_event_name"], "PreToolUse");
-        assert_eq!(v["coucou_agent"], "gemini");
+        assert_eq!(v["hiwings_agent"], "gemini");
         assert_eq!(v["tool_input"]["command"], "ls");
         assert_eq!(v["cwd"], "/home/me/here");
 
@@ -605,7 +605,7 @@ mod tests {
         assert_eq!(v["tool_input"]["new_string"].as_str().unwrap().len(), big.len());
         // Everything else keeps the ordinary cap, and nothing says "cut".
         assert!(v["cwd"].as_str().unwrap().len() <= MAX_FIELD_LEN + 4);
-        assert!(v.get("coucou_diff_truncated").is_none());
+        assert!(v.get("hiwings_diff_truncated").is_none());
 
         let mut multi = serde_json::json!({
             "tool_name": "MultiEdit",
@@ -634,7 +634,7 @@ mod tests {
         });
         truncate_payload(&mut v, "PostToolUse");
         assert!(v["tool_input"]["content"].as_str().unwrap().len() <= MAX_DIFF_FIELD_LEN + 4);
-        assert_eq!(v["coucou_diff_truncated"], serde_json::Value::Bool(true));
+        assert_eq!(v["hiwings_diff_truncated"], serde_json::Value::Bool(true));
 
         // Together, the edit strings never pass the shared budget.
         let half = "y".repeat(MAX_DIFF_FIELD_LEN - 1);
@@ -644,7 +644,7 @@ mod tests {
         let mut multi = serde_json::json!({ "tool_name": "MultiEdit", "tool_input": { "edits": edits } });
         truncate_payload(&mut multi, "PostToolUse");
         assert!(multi.to_string().len() < MAX_DIFF_TOTAL + 64 * 1024);
-        assert_eq!(multi["coucou_diff_truncated"], serde_json::Value::Bool(true));
+        assert_eq!(multi["hiwings_diff_truncated"], serde_json::Value::Bool(true));
     }
 
     #[test]
@@ -702,7 +702,7 @@ mod tests {
         assert_eq!(read(b"ask\n").as_deref(), Some("ask"));
         assert_eq!(read(b"pending\nallow\n").as_deref(), Some("allow"));
         assert_eq!(count.get(), 1);
-        // The card was up, then Coucou went: no answer, Antigravity asks.
+        // The card was up, then hi-wings went: no answer, Antigravity asks.
         assert_eq!(read(b"pending\n"), None);
         assert_eq!(read(b"pending"), None);
         assert_eq!(read(b""), None);
@@ -716,20 +716,20 @@ mod tests {
         let raw = r#"{"hook_event_name":"PreToolUse","toolCall":{"name":"run_command","args":{"CommandLine":"npm i"}}}"#;
         let (v, ev) = run(raw, "antigravity", "PreToolUse");
         assert_eq!(ev.name, "PreToolUse");
-        assert_eq!(v["coucou_kind"], "agy_pre_tool");
+        assert_eq!(v["hiwings_kind"], "agy_pre_tool");
         assert_eq!(v["tool_input"]["command"], "npm i");
-        assert!(v.get("coucou_command_cut").is_none());
+        assert!(v.get("hiwings_command_cut").is_none());
         // A command too long to forward whole is flagged, so no card asks about it.
         let long = format!(
             r#"{{"hook_event_name":"PreToolUse","toolCall":{{"name":"run_command","args":{{"CommandLine":"{}"}}}}}}"#,
             "x".repeat(MAX_FIELD_LEN + 1)
         );
         let (v, _) = run(&long, "antigravity", "PreToolUse");
-        assert_eq!(v["coucou_command_cut"], true);
+        assert_eq!(v["hiwings_command_cut"], true);
         // Other events and agents are not tagged.
         for (agent, event) in [("antigravity", "PostToolUse"), ("gemini", "PreToolUse"), ("", "PreToolUse")] {
             let (v, _) = run(r#"{"tool_name":"run_command"}"#, agent, event);
-            assert!(v.get("coucou_kind").is_none(), "{agent} {event}");
+            assert!(v.get("hiwings_kind").is_none(), "{agent} {event}");
         }
     }
 }

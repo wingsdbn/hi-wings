@@ -1,17 +1,17 @@
-// The coloured band on top of each page of the Coucou window: a deep black
+// The coloured band on top of each page of the hi-wings window: a deep black
 // with the page's colour breathing in a corner, particles that drift all the
-// time and move away from the pointer, and the page's little Mochis walking on
+// time and move away from the pointer, and the page's little Plumes walking on
 // its floor — they hop, look around, wave, and react when poked. Also the
-// glowing cards and the Mochis of empty pages. Port of FlowHubMochis.swift.
+// glowing cards and the Plumes of empty pages. Port of FlowHubPlumes.swift.
 //
 // One animation loop draws every live canvas; it stops when none is left or
 // the window is hidden, so a hidden window costs nothing, and skips the ones
 // scrolled out of sight.
 
-import { BotEngine, hexToRGB } from "../mochi/engine";
+import { BotEngine, hexToRGB } from "../plume/engine";
 import { onScreen, shouldAnimate } from "./frames";
 import type { BotEmoteName, BotStateName } from "../core/layout";
-import type { Outfit } from "../mochi/wardrobe";
+import type { Outfit } from "../plume/wardrobe";
 
 interface Animated {
   el: HTMLCanvasElement;
@@ -29,7 +29,7 @@ let fallback: number | null = null;
 let starved = false;
 let last = performance.now();
 const start = performance.now();
-/** The Coucou window is on screen, as Rust last said (`setWindowShown`). */
+/** The hi-wings window is on screen, as Rust last said (`setWindowShown`). */
 let windowShown = true;
 
 function running(): boolean {
@@ -267,9 +267,9 @@ export function backdrop(canvas: HTMLCanvasElement, color: string, pointerFrom: 
   });
 }
 
-// ── The Mochis ────────────────────────────────────────────────────────────────
+// ── The Plumes ────────────────────────────────────────────────────────────────
 
-export interface MochiSpec {
+export interface PlumeSpec {
   color: string;
   /** Body width in CSS pixels. */
   size: number;
@@ -294,15 +294,15 @@ class Walker {
   nextEvent = 2 + Math.random() * 4;
   waving = 0;
 
-  constructor(public spec: MochiSpec) {
+  constructor(public spec: PlumeSpec) {
     this.engine.bodyColor = hexToRGB(spec.color);
     this.engine.setState(spec.state ?? "idle", true);
     if (spec.outfit && spec.outfit !== "none") this.engine.setOutfit(spec.outfit, false);
   }
 }
 
-/** The page's Mochis on the band's floor, in the right part of `canvas`. */
-export function troupe(canvas: HTMLCanvasElement, cast: MochiSpec[], width: number) {
+/** The page's Plumes on the band's floor, in the right part of `canvas`. */
+export function troupe(canvas: HTMLCanvasElement, cast: PlumeSpec[], width: number) {
   const walkers = cast.map((spec) => new Walker(spec));
   let pointer: { x: number; y: number } | null = null;
   let placed = false;
@@ -399,8 +399,8 @@ export function troupe(canvas: HTMLCanvasElement, cast: MochiSpec[], width: numb
   });
 }
 
-/** One Mochi alone (the sidebar's logo, an empty page). */
-export function liveMochi(canvas: HTMLCanvasElement, color = "#F5F6F8", state: BotStateName = "idle") {
+/** One Plume alone (the sidebar's logo, an empty page). */
+export function livePlume(canvas: HTMLCanvasElement, color = "#F5F6F8", state: BotStateName = "idle") {
   const engine = new BotEngine();
   engine.bodyColor = hexToRGB(color);
   engine.setState(state, true);
@@ -431,10 +431,10 @@ export function liveMochi(canvas: HTMLCanvasElement, color = "#F5F6F8", state: B
 
 export interface Theme {
   color: string;
-  cast: MochiSpec[];
+  cast: PlumeSpec[];
 }
 
-const m = (color: string, size: number, start: number, extra: Partial<MochiSpec> = {}): MochiSpec => ({
+const m = (color: string, size: number, start: number, extra: Partial<PlumeSpec> = {}): PlumeSpec => ({
   color, size, start, ...extra,
 });
 
@@ -466,7 +466,7 @@ export const THEMES: Record<string, Theme> = {
   mailVIP: { color: "#F5A524", cast: [m("#F5A524", 60, 0.3, { outfit: "crown" }), m("#2F8CFF", 46, 0.85)] },
 };
 
-/** The band itself: title, line, actions, and the Mochis. */
+/** The band itself: title, line, actions, and the Plumes. */
 export function hero(page: string, title: string, subtitle: string | null, actions: HTMLElement[] = [], compact = false): HTMLElement {
   const theme = THEMES[page] ?? THEMES.general;
   const el = document.createElement("div");
@@ -476,8 +476,8 @@ export function hero(page: string, title: string, subtitle: string | null, actio
   el.style.setProperty("--hero-tint", rgba(theme.color, 0.1));
   const back = document.createElement("canvas");
   back.className = "backdrop";
-  const mochis = document.createElement("canvas");
-  mochis.className = "troupe";
+  const plumes = document.createElement("canvas");
+  plumes.className = "troupe";
   const copy = document.createElement("div");
   copy.className = "copy";
   const h1 = document.createElement("h1");
@@ -494,9 +494,9 @@ export function hero(page: string, title: string, subtitle: string | null, actio
     row.append(...actions);
     copy.append(row);
   }
-  el.append(back, mochis, copy);
+  el.append(back, plumes, copy);
   backdrop(back, theme.color, el);
-  troupe(mochis, theme.cast, compact ? 280 : 340);
+  troupe(plumes, theme.cast, compact ? 280 : 340);
   return el;
 }
 
@@ -516,7 +516,7 @@ export function glowCard(color: string, ...content: (HTMLElement | string)[]): H
   return el;
 }
 
-/** An empty page: a Mochi asleep, and a line. */
+/** An empty page: a Plume asleep, and a line. */
 export function emptyState(text: string, state: BotStateName = "sleeping", color = "#F5F6F8"): HTMLElement {
   const el = document.createElement("div");
   el.className = "hub-empty";
@@ -524,6 +524,6 @@ export function emptyState(text: string, state: BotStateName = "sleeping", color
   const p = document.createElement("div");
   p.textContent = text;
   el.append(canvas, p);
-  liveMochi(canvas, color, state);
+  livePlume(canvas, color, state);
   return el;
 }

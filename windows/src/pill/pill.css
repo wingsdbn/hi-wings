@@ -126,14 +126,14 @@ body {
   flex-direction: column;
 }
 
-.mochi {
+.plume {
   width: 22px;
   height: 22px;
   flex: 0 0 22px;
   position: relative;
 }
 
-.mochi canvas {
+.plume canvas {
   position: absolute;
   left: -7.33px;
   top: -7.33px;

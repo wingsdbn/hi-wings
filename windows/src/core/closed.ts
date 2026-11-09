@@ -1,7 +1,7 @@
 // The closed island: what stays at the top of the screen once the island is
 // folded all the way, where a Mac has its notch. A PC has no notch to hide
 // behind, so instead of vanishing (which left nothing to find it by) the
-// island keeps a small black shape there, with one thing in it: Mochi (what a
+// island keeps a small black shape there, with one thing in it: Plume (what a
 // Mac shows on a screen without a notch), the time, the date and the time, the
 // Claude plan's usage, what plays, or nothing at all.
 // "hidden" keeps the old behaviour: nothing shows, the top edge wakes it.
@@ -9,20 +9,20 @@
 
 import { dominantPct, planColor, type PlanUsage } from "./plan";
 
-export type ClosedIsland = "mochi" | "time" | "datetime" | "claude" | "music" | "empty" | "hidden";
+export type ClosedIsland = "plume" | "time" | "datetime" | "claude" | "music" | "empty" | "hidden";
 
-export const CLOSED_ISLANDS: readonly ClosedIsland[] = ["mochi", "time", "datetime", "claude", "music", "empty", "hidden"];
+export const CLOSED_ISLANDS: readonly ClosedIsland[] = ["plume", "time", "datetime", "claude", "music", "empty", "hidden"];
 
 /** A value this build doesn't know (written by a newer one) reads as the default. */
 export function closedIsland(value: unknown): ClosedIsland {
-  return CLOSED_ISLANDS.includes(value as ClosedIsland) ? (value as ClosedIsland) : "mochi";
+  return CLOSED_ISLANDS.includes(value as ClosedIsland) ? (value as ClosedIsland) : "plume";
 }
 
-/** The closed island's size where there is nothing but Mochi, in CSS px: the
+/** The closed island's size where there is nothing but Plume, in CSS px: the
  *  Mac's resting island on a screen without a notch (IslandScreenGeometry). */
 export const CLOSED_H = 24;
 export const CLOSED_MIN_W = 80;
-/** Mochi in it, as on that Mac: centred, a little smaller than the island is tall. */
+/** Plume in it, as on that Mac: centred, a little smaller than the island is tall. */
 export const CLOSED_BOT_D = 18;
 /** Widest: a long song title is cut, the island doesn't run across the screen. */
 export const CLOSED_MAX_W = 280;
@@ -61,7 +61,7 @@ export function closedContent(style: ClosedIsland, input: ClosedInputs): ClosedC
   switch (style) {
     case "hidden":
     case "empty":
-    case "mochi":
+    case "plume":
       return null;
     case "time":
       return plain(time(input.now, input.locale));

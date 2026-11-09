@@ -69,7 +69,7 @@ jobs:
       - name: Test Flow text (snippets, dictionary, numbers)
         run: bash scripts/test-flow-text.sh
 
-      - name: Test the work streak (Mochi sleepy after long work, fresh after a break)
+      - name: Test the work streak (Plume sleepy after long work, fresh after a break)
         run: bash scripts/test-work-streak.sh
 
       - name: Test Notetaker transcript (speakers, echo, summary, Markdown)
@@ -87,8 +87,8 @@ jobs:
       - name: Test Claude Desktop chat (stop button labels)
         run: bash scripts/test-claude-desktop-chat.sh
 
-      - name: Desktop Mochi and gaze tests
-        run: bash scripts/test-desktop-mochi.sh
+      - name: Desktop Plume and gaze tests
+        run: bash scripts/test-desktop-plume.sh
 
       - name: Test auto-close timing
         run: bash scripts/test-auto-close.sh
@@ -210,7 +210,7 @@ jobs:
         run: |
           xcodebuild \
             -project NotchBuddy/NotchBuddy.xcodeproj \
-            -scheme CoucouAppStore \
+            -scheme WingsAppStore \
             -configuration Debug \
             build \
             CODE_SIGNING_ALLOWED=NO \
@@ -240,7 +240,7 @@ jobs:
         run: |
           xcodebuild \
             -project NotchBuddy/NotchBuddy.xcodeproj \
-            -scheme CoucouPhone \
+            -scheme WingsPhone \
             -destination 'generic/platform=iOS' \
             build \
             CODE_SIGNING_ALLOWED=NO

@@ -1,4 +1,4 @@
-// Coucou for Windows — app wiring and the commands the island calls.
+// hi-wings for Windows — app wiring and the commands the island calls.
 
 mod agent_hooks;
 mod agents;
@@ -105,9 +105,9 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         let screen_changed = current.screen != settings.screen;
         let autostart_changed = current.autostart != settings.autostart;
         let shortcuts_changed = current.shortcuts != settings.shortcuts;
-        // Where Mochi sits on the desktop is desktop.rs's to say, not a webview's.
+        // Where Plume sits on the desktop is desktop.rs's to say, not a webview's.
         let mut settings = settings.clone();
-        settings.desktop_mochi = current.desktop_mochi.clone();
+        settings.desktop_plume = current.desktop_plume.clone();
         // Same for the phone link: only its own commands turn it on or off.
         settings.phone_link = current.phone_link;
         settings.phone_chat = current.phone_chat;
@@ -132,7 +132,7 @@ fn save_settings(app: AppHandle, shared: State<Shared>, settings: Settings) {
         let manager = app.autolaunch();
         let result = if settings.autostart { manager.enable() } else { manager.disable() };
         if let Err(err) = result {
-            eprintln!("[coucou] autostart: {err}");
+            eprintln!("[hiwings] autostart: {err}");
         }
     }
     if screen_changed {
@@ -167,7 +167,7 @@ fn set_system_languages(app: AppHandle, languages: Vec<String>) {
 fn language_changed(app: &AppHandle) {
     tray::retitle(app);
     if let Some(window) = app.get_webview_window(HUB_LABEL) {
-        let _ = window.set_title("Coucou");
+        let _ = window.set_title("hi-wings");
     }
 }
 
@@ -412,7 +412,7 @@ fn hooks_status() -> HookStatus {
     hooks::status()
 }
 
-/// Pill ID → whether that agent's hooks reach Coucou. Read-only.
+/// Pill ID → whether that agent's hooks reach hi-wings. Read-only.
 #[tauri::command]
 fn agent_hooks_status() -> std::collections::HashMap<String, bool> {
     agent_hooks::status()
@@ -752,11 +752,11 @@ fn settings_page_url(app: &AppHandle) -> WebviewUrl {
     WebviewUrl::App("settings.html".into())
 }
 
-/// The Coucou window (Flow dictation, the Notetaker and every setting of the
+/// The hi-wings window (Flow dictation, the Notetaker and every setting of the
 /// island), labelled "settings" since it grew out of the settings window.
 pub const HUB_LABEL: &str = "settings";
 
-/// The Coucou window is created hidden at launch and only ever shown and
+/// The hi-wings window is created hidden at launch and only ever shown and
 /// hidden afterwards. A WebView2 window created later — on the main thread or
 /// not — silently comes up blank in this app, so the window that works is the
 /// one that exists before the island's webview does.
@@ -764,7 +764,7 @@ fn create_settings_window(app: &AppHandle) {
     let url = settings_page_url(app);
     match WebviewWindowBuilder::new(app, HUB_LABEL, url)
         .additional_browser_args(BROWSER_ARGS)
-        .title("Coucou")
+        .title("hi-wings")
         .inner_size(1100.0, 720.0)
         .min_inner_size(820.0, 560.0)
         .resizable(true)
@@ -791,11 +791,11 @@ fn create_settings_window(app: &AppHandle) {
             });
             webview_memory::set_low(&win, true); // created hidden
         }
-        Err(err) => log::line(format!("Coucou window failed: {err}")),
+        Err(err) => log::line(format!("hi-wings window failed: {err}")),
     }
 }
 
-/// Whether the Coucou window is on screen (shown and not minimised). Its page
+/// Whether the hi-wings window is on screen (shown and not minimised). Its page
 /// animates its canvases only then (hub/hero.ts): WebKitGTK can keep
 /// `document.visibilityState` at "visible" for a hidden window, and its
 /// animation loop then kept a core busy with the window closed (#792).
@@ -807,7 +807,7 @@ fn set_hub_shown(win: &tauri::WebviewWindow, shown: bool) {
     }
 }
 
-/// Whether the Coucou window is on screen, for what only it shows.
+/// Whether the hi-wings window is on screen, for what only it shows.
 pub(crate) fn hub_is_shown() -> bool {
     HUB_SHOWN.load(Ordering::Relaxed)
 }
@@ -822,14 +822,14 @@ pub fn show_settings_window(app: &AppHandle) {
     show_hub(app, Some("general"));
 }
 
-/// Shows the Coucou window, on `page` when given ("dictation", "notes",
+/// Shows the hi-wings window, on `page` when given ("dictation", "notes",
 /// "settings", "general", "shortcuts"…).
 pub fn show_hub(app: &AppHandle, page: Option<&str>) {
     let Some(win) = app.get_webview_window(HUB_LABEL) else {
         // Creating it at startup can fail on some machines (WebView2
         // 0x80070578, #775): try again now, on the main thread, where
         // window creation can't deadlock a command.
-        log::line("Coucou window missing, creating it again");
+        log::line("hi-wings window missing, creating it again");
         let handle = app.clone();
         let _ = app.run_on_main_thread(move || {
             create_settings_window(&handle);
@@ -852,10 +852,10 @@ pub fn show_hub(app: &AppHandle, page: Option<&str>) {
     set_hub_shown(&win, true);
 }
 
-/// The argument the login item starts Coucou with.
+/// The argument the login item starts hi-wings with.
 const AUTOSTART_ARG: &str = "--autostart";
 
-/// Coucou started with the computer, not opened by the user: the window stays hidden.
+/// hi-wings started with the computer, not opened by the user: the window stays hidden.
 pub fn launched_at_login() -> bool {
     std::env::args().any(|a| a == AUTOSTART_ARG)
 }
@@ -873,11 +873,11 @@ pub fn run() {
 
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
-            // `coucou --shortcut <action>`: what a desktop's own keyboard
+            // `hiwings --shortcut <action>`: what a desktop's own keyboard
             // settings run where we can't listen for keys ourselves (Wayland).
             match shortcuts::from_args(&argv) {
                 Some(action) => shortcuts::dispatch(app, action),
-                // Opening Coucou again (its shortcut, the Start menu) shows its window.
+                // Opening hi-wings again (its shortcut, the Start menu) shows its window.
                 None => show_hub(app, None),
             }
         }))
@@ -1007,16 +1007,16 @@ pub fn run() {
             recap::recap_clear,
             recap::recap_save_png,
             recap::recap_reveal_saved,
-            desktop::desktop_mochi_info,
-            desktop::desktop_mochi_pick_up,
-            desktop::desktop_mochi_carry,
-            desktop::desktop_mochi_carry_end,
-            desktop::desktop_mochi_drag_begin,
-            desktop::desktop_mochi_drag_move,
-            desktop::desktop_mochi_drag_end,
-            desktop::desktop_mochi_fly_out,
-            desktop::desktop_mochi_fly_home,
-            desktop::desktop_mochi_set_asleep,
+            desktop::desktop_plume_info,
+            desktop::desktop_plume_pick_up,
+            desktop::desktop_plume_carry,
+            desktop::desktop_plume_carry_end,
+            desktop::desktop_plume_drag_begin,
+            desktop::desktop_plume_drag_move,
+            desktop::desktop_plume_drag_end,
+            desktop::desktop_plume_fly_out,
+            desktop::desktop_plume_fly_home,
+            desktop::desktop_plume_set_asleep,
             sounds::custom_sounds,
             sounds::custom_sound,
             sounds::reveal_sounds_folder,
@@ -1089,7 +1089,7 @@ pub fn run() {
             tray::build(&handle)?;
             // Before the island: see create_settings_window.
             create_settings_window(&handle);
-            // Same rule for Mochi's desktop window and the dictation pill.
+            // Same rule for Plume's desktop window and the dictation pill.
             desktop::setup(&handle);
             flow::setup(&handle);
             notes::setup(&handle);
@@ -1117,7 +1117,7 @@ pub fn run() {
             gate.set_active(true);
             island::spawn_cursor_poll(handle.clone(), gate.clone());
 
-            log::line(format!("--- Coucou {} started ---", env!("CARGO_PKG_VERSION")));
+            log::line(format!("--- hi-wings {} started ---", env!("CARGO_PKG_VERSION")));
             hooks::ensure_hook_exe(&handle);
             pipe::start(handle.clone());
             phone_link::start_if_enabled(&handle);
@@ -1130,7 +1130,7 @@ pub fn run() {
             // New versions: nothing goes to GitHub until the user agrees (update.rs).
             update::start(handle.clone());
             if loaded.autostart {
-                // Login items written before 0.5 start Coucou without --autostart:
+                // Login items written before 0.5 start hi-wings without --autostart:
                 // writing it again adds it, so the window stays hidden at login.
                 let _ = handle.autolaunch().enable();
             }
@@ -1141,13 +1141,13 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while building Coucou")
+        .expect("error while building hi-wings")
         .run(|app, event| {
             // Withdraw the phone link's announcement on the local network before the process ends.
             if let tauri::RunEvent::Exit = event {
                 phone_link::stop_on_exit(app);
                 notes::shutdown(app);
-                // GOWA started by Coucou stops with it; the conversations were only in memory.
+                // GOWA started by hi-wings stops with it; the conversations were only in memory.
                 whatsapp::shutdown();
             }
         });
@@ -1176,7 +1176,7 @@ mod tests {
 
     #[test]
     fn only_an_existing_file_by_its_full_path_reaches_the_editor() {
-        let dir = std::env::temp_dir().join(format!("coucou-diff-file-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("hiwings-diff-file-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let file = dir.join("edited.ts");
         std::fs::write(&file, "x").unwrap();

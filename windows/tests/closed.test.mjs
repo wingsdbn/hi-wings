@@ -10,14 +10,14 @@ import {
 const NOW = new Date(2026, 10, 2, 20, 28);
 const input = (over = {}) => ({ now: NOW, locale: "en-GB", planUsage: null, music: null, ...over });
 
-test("an unknown or missing choice reads as Mochi, the Mac's own look", () => {
-  assert.equal(closedIsland(undefined), "mochi");
-  assert.equal(closedIsland("sparkles"), "mochi");
+test("an unknown or missing choice reads as Plume, the Mac's own look", () => {
+  assert.equal(closedIsland(undefined), "plume");
+  assert.equal(closedIsland("sparkles"), "plume");
   for (const style of CLOSED_ISLANDS) assert.equal(closedIsland(style), style);
 });
 
-test("Mochi, the empty island and no island show no line", () => {
-  for (const style of ["mochi", "empty", "hidden"]) assert.equal(closedContent(style, input()), null);
+test("Plume, the empty island and no island show no line", () => {
+  for (const style of ["plume", "empty", "hidden"]) assert.equal(closedContent(style, input()), null);
 });
 
 test("the time, and the date with it", () => {

@@ -1,6 +1,6 @@
-// Generates src/i18n/strings.json from the Mac app's string catalog
-// (NotchBuddy/Resources/Localizable.xcstrings), so Windows and Linux show the
-// Mac's own translations.
+// Generates src/i18n/strings.json from the string catalog inherited from
+// Coucou (src/i18n/catalog.xcstrings), an Apple .xcstrings file: it holds the
+// 14 languages hi-wings ships, keyed by English text.
 //
 //   node scripts/gen-strings.mjs           writes src/i18n/strings.json
 //   node scripts/gen-strings.mjs --check   fails if the file is out of date
@@ -20,10 +20,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const SOURCE = resolve(here, "../../NotchBuddy/Resources/Localizable.xcstrings");
+const SOURCE = resolve(here, "../src/i18n/catalog.xcstrings");
 const OUTPUT = resolve(here, "../src/i18n/strings.json");
 
-/** The languages Coucou ships, in the Mac's picker order. English is the source. */
+/** The languages hi-wings ships, in the Mac's picker order. English is the source. */
 export const LANGUAGES = ["en", "zh-Hans", "hi", "es", "ar", "fr", "bn", "pt-BR", "ru", "id", "de", "tr", "ko", "ja"];
 
 /**
@@ -108,7 +108,7 @@ export function generate(catalog) {
   }
   const sorted = Object.fromEntries(Object.entries(strings).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
   return {
-    _generated: "By scripts/gen-strings.mjs from NotchBuddy/Resources/Localizable.xcstrings. Do not edit: run `node scripts/gen-strings.mjs`.",
+    _generated: "By scripts/gen-strings.mjs from src/i18n/catalog.xcstrings. Do not edit: run `node scripts/gen-strings.mjs`.",
     languages: LANGUAGES,
     strings: sorted,
   };

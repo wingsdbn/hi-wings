@@ -8,7 +8,7 @@
 //   * click-through is the window's input region, set to the island shape, so
 //     the compositor itself sends every other click to whatever is underneath;
 //   * the cursor comes from the page's own mouse events, which only fire over
-//     the island — Mochi's eyes follow the pointer there, not across the screen.
+//     the island — Plume's eyes follow the pointer there, not across the screen.
 
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -23,7 +23,7 @@ use tauri::{AppHandle, WebviewWindow};
 use super::{home_dir, LocalTime};
 
 /// File name of the Claude Code relay.
-pub const HOOK_EXE: &str = "coucou-hook";
+pub const HOOK_EXE: &str = "hiwings-hook";
 
 /// Environment variable holding the home directory.
 pub const HOME_VAR: &str = "HOME";
@@ -39,16 +39,16 @@ fn xdg(var: &str, fallback: &str) -> PathBuf {
         .unwrap_or_else(|| home_dir().join(fallback))
 }
 
-/// ~/.config/coucou — preferences.
+/// ~/.config/hiwings — preferences.
 pub fn config_dir() -> PathBuf {
-    xdg("XDG_CONFIG_HOME", ".config").join("coucou")
+    xdg("XDG_CONFIG_HOME", ".config").join("hiwings")
 }
 
-/// ~/.local/share/coucou — where coucou-hook, the inbox and the log live. The
+/// ~/.local/share/hiwings — where hiwings-hook, the inbox and the log live. The
 /// relay has to sit at a stable path: an AppImage is mounted somewhere new on
 /// every launch.
 pub fn local_dir() -> PathBuf {
-    xdg("XDG_DATA_HOME", ".local/share").join("coucou")
+    xdg("XDG_DATA_HOME", ".local/share").join("hiwings")
 }
 
 /// Where a saved image goes, best first: the XDG pictures folder named in
@@ -90,7 +90,7 @@ fn xdg_user_dir(text: &str, key: &str, home: &Path) -> Option<PathBuf> {
 /// keeps its plugin registry in ~/.cache/gstreamer-1.0 by default — the same
 /// file the system's GStreamer uses. The AppImage is mounted somewhere new on
 /// every launch, so each launch would rewrite the system's registry with
-/// plugin paths that vanish once Coucou quits. Give ours its own file.
+/// plugin paths that vanish once hi-wings quits. Give ours its own file.
 pub fn prepare_environment() {
     let _ = INHERITED.set(OWN_OVERRIDES.iter().map(|k| (*k, std::env::var_os(k))).collect());
     prefer_x11_on_gnome();
@@ -98,7 +98,7 @@ pub fn prepare_environment() {
     if std::env::var_os("APPIMAGE").is_none() || std::env::var_os("GST_REGISTRY").is_some() {
         return;
     }
-    let cache = xdg("XDG_CACHE_HOME", ".cache").join("coucou");
+    let cache = xdg("XDG_CACHE_HOME", ".cache").join("hiwings");
     if std::fs::create_dir_all(&cache).is_ok() {
         std::env::set_var("GST_REGISTRY", cache.join("gstreamer-registry.bin"));
     }
@@ -108,13 +108,13 @@ pub fn prepare_environment() {
 /// to go, so the island lands in the middle of the screen. Through XWayland it
 /// can be placed, and a Dock window survives "show desktop" (Super+D).
 /// An inherited GDK_BACKEND=wayland is overridden too: editors and terminals
-/// pass theirs down to every child. COUCOU_X11=0 keeps the Wayland window.
+/// pass theirs down to every child. HIWINGS_X11=0 keeps the Wayland window.
 fn prefer_x11_on_gnome() {
     let env = |k: &str| std::env::var(k).unwrap_or_default();
     if should_prefer_x11(
         &env("XDG_SESSION_TYPE"),
         &env("XDG_CURRENT_DESKTOP"),
-        &env("COUCOU_X11"),
+        &env("HIWINGS_X11"),
         &env("DISPLAY"),
     ) {
         std::env::set_var("GDK_BACKEND", "x11");
@@ -201,8 +201,8 @@ fn is_private_dir(dir: &Path) -> bool {
         .unwrap_or(false)
 }
 
-/// Where coucou-hook finds us: `$XDG_RUNTIME_DIR/coucou.sock`, or
-/// `/run/user/<uid>/coucou.sock` when the variable is missing. A directory
+/// Where hiwings-hook finds us: `$XDG_RUNTIME_DIR/hiwings.sock`, or
+/// `/run/user/<uid>/hiwings.sock` when the variable is missing. A directory
 /// that is not ours and private means no relay at all — never a fallback to a
 /// shared place like /tmp. Must match `socket_path()` in hook/src/unix.rs
 /// exactly.
@@ -211,7 +211,7 @@ pub fn relay_socket_path() -> Option<PathBuf> {
         .map(PathBuf::from)
         .filter(|p| p.is_absolute())
         .unwrap_or_else(|| PathBuf::from(format!("/run/user/{}", unsafe { libc::getuid() })));
-    is_private_dir(&dir).then(|| dir.join("coucou.sock"))
+    is_private_dir(&dir).then(|| dir.join("hiwings.sock"))
 }
 
 // ── Who we are ────────────────────────────────────────────────────────────────
@@ -240,7 +240,7 @@ pub fn process_running(_exe: &str) -> bool {
     false
 }
 
-/// What the variables Coucou sets for itself (prepare_environment) were when it
+/// What the variables hi-wings sets for itself (prepare_environment) were when it
 /// started, so its children get the user's own values back.
 static INHERITED: std::sync::OnceLock<Vec<(&'static str, Option<std::ffi::OsString>)>> = std::sync::OnceLock::new();
 /// Set or changed by prepare_environment for this process only.
@@ -250,7 +250,7 @@ const OWN_OVERRIDES: [&str; 3] = ["GDK_BACKEND", "GDK_DPI_SCALE", "GST_REGISTRY"
 const APPIMAGE_GST: [&str; 3] = ["GST_REGISTRY_1_0", "GST_PLUGIN_SYSTEM_PATH", "GST_PLUGIN_SYSTEM_PATH_1_0"];
 
 /// The changes a child's environment needs: `Some` sets the value back, `None`
-/// removes the variable. Nothing for a variable Coucou left as it found it.
+/// removes the variable. Nothing for a variable hi-wings left as it found it.
 fn child_env(
     inherited: &[(&str, Option<std::ffi::OsString>)],
     current: impl Fn(&str) -> Option<std::ffi::OsString>,
@@ -272,7 +272,7 @@ fn child_env(
     out
 }
 
-/// Prepares a command to launch a child process: Coucou's own GDK and
+/// Prepares a command to launch a child process: hi-wings's own GDK and
 /// GStreamer settings (GDK_BACKEND=x11 on GNOME, GDK_DPI_SCALE, the AppImage's
 /// GStreamer paths) go back to what the user had, so they do not leak into the
 /// browser, the editor or the apps it opens (#859).
@@ -473,9 +473,9 @@ mod layer {
     }
 }
 
-/// COUCOU_LAYER_SHELL=0 is the way out on a compositor where it misbehaves.
+/// HIWINGS_LAYER_SHELL=0 is the way out on a compositor where it misbehaves.
 fn layer_shell_wanted() -> bool {
-    std::env::var("COUCOU_LAYER_SHELL").map(|v| v != "0").unwrap_or(true)
+    std::env::var("HIWINGS_LAYER_SHELL").map(|v| v != "0").unwrap_or(true)
 }
 
 /// True once the island window is a layer-shell surface.
@@ -499,7 +499,7 @@ pub fn unblock_webview_drops(_app: &AppHandle) {}
 /// the keyboard. Must run before the window is first shown: a layer surface
 /// cannot be made out of a window the compositor already knows.
 ///
-/// Without layer-shell (GNOME, X11, or COUCOU_LAYER_SHELL=0) the window stays
+/// Without layer-shell (GNOME, X11, or HIWINGS_LAYER_SHELL=0) the window stays
 /// an ordinary always-on-top window that refuses focus; where it lands is then
 /// up to the window manager.
 pub fn make_non_activating(win: &WebviewWindow) {
@@ -512,7 +512,7 @@ pub fn make_non_activating(win: &WebviewWindow) {
     let supported = unsafe { layer::gtk_layer_is_supported() } != 0;
     if !wanted || !supported || gw.is_realized() {
         let why = if !wanted {
-            "COUCOU_LAYER_SHELL=0"
+            "HIWINGS_LAYER_SHELL=0"
         } else if supported {
             "window already shown"
         } else {
@@ -523,8 +523,8 @@ pub fn make_non_activating(win: &WebviewWindow) {
         if !gw.is_realized() {
             // On X11 a Dock is kept above everything and is the only kind of
             // window, besides the desktop, that "show desktop" leaves alone.
-            // COUCOU_DOCK=0 falls back to a utility window.
-            let dock = std::env::var("COUCOU_DOCK").map(|v| v != "0").unwrap_or(true);
+            // HIWINGS_DOCK=0 falls back to a utility window.
+            let dock = std::env::var("HIWINGS_DOCK").map(|v| v != "0").unwrap_or(true);
             gw.set_type_hint(if dock {
                 gtk::gdk::WindowTypeHint::Dock
             } else {
@@ -542,7 +542,7 @@ pub fn make_non_activating(win: &WebviewWindow) {
     let ptr = gtk_window_ptr(&gw);
     unsafe {
         layer::gtk_layer_init_for_window(ptr);
-        layer::gtk_layer_set_namespace(ptr, c"coucou".as_ptr());
+        layer::gtk_layer_set_namespace(ptr, c"hiwings".as_ptr());
         layer::gtk_layer_set_layer(ptr, layer::LAYER_OVERLAY);
         // Top edge only: the compositor centres the surface horizontally.
         layer::gtk_layer_set_anchor(ptr, layer::EDGE_TOP, 1);
@@ -711,7 +711,7 @@ fn apply_input_region(gw: &impl IsA<gtk::Widget>, rect: Region) {
 /// grab made through XWayland only sees keys typed into other X11 windows, so
 /// it would look registered and never fire. On Wayland the shortcuts go to the
 /// desktop through the XDG GlobalShortcuts portal instead (portal.rs), and
-/// where there is none Settings explains how to bind `coucou --shortcut <id>`
+/// where there is none Settings explains how to bind `hiwings --shortcut <id>`
 /// in the desktop's own keyboard settings.
 pub fn global_shortcuts_blocked() -> Option<&'static str> {
     let set = |var: &str| std::env::var_os(var).is_some_and(|v| !v.is_empty());
@@ -732,7 +732,7 @@ pub fn ctrl_alt_types(_vk: u16, _shift: bool) -> Option<String> {
     None
 }
 
-// ── Desktop Mochi window ──────────────────────────────────────────────────────
+// ── Desktop Plume window ──────────────────────────────────────────────────────
 //
 // Where the window may go decides everything here:
 //   * X11 places any window where it is asked: an ordinary always-on-top
@@ -740,7 +740,7 @@ pub fn ctrl_alt_types(_vk: u16, _shift: bool) -> Option<String> {
 //   * a layer-shell compositor won't move a toplevel, but anchors a layer
 //     surface wherever its margins say, on the island's display;
 //   * GNOME on Wayland has neither, so the feature is off there.
-// In every case the input region is Mochi's body, so clicks anywhere else go
+// In every case the input region is Plume's body, so clicks anywhere else go
 // to the desktop underneath without any cursor polling.
 
 /// Which of the three applies. Must run on the GTK main thread.
@@ -759,8 +759,8 @@ pub fn desktop_mode() -> super::DesktopMode {
     }
 }
 
-/// The input shape last asked for the desktop Mochi, re-applied on every map.
-static MOCHI_SHAPE: Mutex<super::MouseShape> = Mutex::new(super::MouseShape::Empty);
+/// The input shape last asked for the desktop Plume, re-applied on every map.
+static PLUME_SHAPE: Mutex<super::MouseShape> = Mutex::new(super::MouseShape::Empty);
 
 /// Sets the window up for `mode` before it is ever shown. False means it can't
 /// be used (a layer surface can't be made from a window already shown).
@@ -770,14 +770,14 @@ pub fn prepare_desktop_window(win: &WebviewWindow, mode: super::DesktopMode) -> 
     match mode {
         super::DesktopMode::Layer => {
             if gw.is_realized() {
-                crate::log::line("desktop Mochi: window already shown, no layer surface");
+                crate::log::line("desktop Plume: window already shown, no layer surface");
                 return false;
             }
             gw.set_titlebar(None::<&gtk::Widget>);
             let ptr = gtk_window_ptr(&gw);
             unsafe {
                 layer::gtk_layer_init_for_window(ptr);
-                layer::gtk_layer_set_namespace(ptr, c"coucou-mochi".as_ptr());
+                layer::gtk_layer_set_namespace(ptr, c"hiwings-plume".as_ptr());
                 // Above windows, below fullscreen video — like a floating panel.
                 layer::gtk_layer_set_layer(ptr, layer::LAYER_TOP);
                 layer::gtk_layer_set_anchor(ptr, layer::EDGE_TOP, 1);
@@ -790,13 +790,13 @@ pub fn prepare_desktop_window(win: &WebviewWindow, mode: super::DesktopMode) -> 
             // Same first-frame problem as the island (see make_non_activating).
             let remapped = std::cell::Cell::new(false);
             gw.connect_map_event(move |w, _| {
-                apply_mouse_shape(w, *MOCHI_SHAPE.lock().unwrap());
+                apply_mouse_shape(w, *PLUME_SHAPE.lock().unwrap());
                 if !remapped.replace(true) {
                     let w = w.clone();
                     gtk::glib::idle_add_local_once(move || {
                         w.hide();
                         w.show_all();
-                        apply_mouse_shape(&w, *MOCHI_SHAPE.lock().unwrap());
+                        apply_mouse_shape(&w, *PLUME_SHAPE.lock().unwrap());
                     });
                 }
                 gtk::glib::Propagation::Proceed
@@ -805,7 +805,7 @@ pub fn prepare_desktop_window(win: &WebviewWindow, mode: super::DesktopMode) -> 
         }
         super::DesktopMode::Window => {
             gw.connect_map_event(|w, _| {
-                apply_mouse_shape(w, *MOCHI_SHAPE.lock().unwrap());
+                apply_mouse_shape(w, *PLUME_SHAPE.lock().unwrap());
                 gtk::glib::Propagation::Proceed
             });
             true
@@ -814,9 +814,9 @@ pub fn prepare_desktop_window(win: &WebviewWindow, mode: super::DesktopMode) -> 
     }
 }
 
-/// Which part of the desktop Mochi takes the mouse. Main thread.
+/// Which part of the desktop Plume takes the mouse. Main thread.
 pub fn set_desktop_shape(win: &WebviewWindow, shape: super::MouseShape) {
-    *MOCHI_SHAPE.lock().unwrap() = shape;
+    *PLUME_SHAPE.lock().unwrap() = shape;
     let Ok(gw) = win.gtk_window() else { return };
     apply_mouse_shape(&gw, shape);
 }
@@ -868,7 +868,7 @@ pub fn set_layer_margins(win: &WebviewWindow, x: f64, y: f64) {
 
 /// Layer surface only: `on` stretches it over the whole display — how a drag
 /// gets exact pointer positions on Wayland, where a surface that moves under
-/// the pointer can't tell where it is — and `off` folds it back to Mochi's
+/// the pointer can't tell where it is — and `off` folds it back to Plume's
 /// size in the corner. Main thread.
 pub fn set_layer_overlay(win: &WebviewWindow, on: bool) {
     let Ok(gw) = win.gtk_window() else { return };
@@ -883,9 +883,9 @@ pub fn set_layer_overlay(win: &WebviewWindow, on: bool) {
     }
 }
 
-/// Layer surface only: puts the desktop Mochi on the island's display and
+/// Layer surface only: puts the desktop Plume on the island's display and
 /// returns that display's logical size. Main thread.
-pub fn layer_display(island: &WebviewWindow, mochi: &WebviewWindow) -> Option<(f64, f64)> {
+pub fn layer_display(island: &WebviewWindow, plume: &WebviewWindow) -> Option<(f64, f64)> {
     let island_gw = island.gtk_window().ok()?;
     let display = gtk::gdk::Display::default()?;
     let monitor = island_gw
@@ -893,7 +893,7 @@ pub fn layer_display(island: &WebviewWindow, mochi: &WebviewWindow) -> Option<(f
         .and_then(|w| display.monitor_at_window(&w))
         .or_else(|| display.primary_monitor())
         .or_else(|| display.monitor(0))?;
-    if let Ok(gw) = mochi.gtk_window() {
+    if let Ok(gw) = plume.gtk_window() {
         unsafe { layer::gtk_layer_set_monitor(gtk_window_ptr(&gw), monitor.to_glib_none().0) };
     }
     let g = monitor.geometry();
@@ -911,7 +911,7 @@ mod tests {
 
     #[test]
     fn only_a_private_directory_of_ours_can_hold_the_relay_socket() {
-        let base = std::env::temp_dir().join(format!("coucou-rt-{}", std::process::id()));
+        let base = std::env::temp_dir().join(format!("hiwings-rt-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&base);
         let dir = base.join("runtime");
         std::fs::create_dir_all(&dir).unwrap();
@@ -961,7 +961,7 @@ mod tests {
     #[test]
     fn private_dirs_are_closed_to_everyone_else() {
         use std::os::unix::fs::MetadataExt;
-        let dir = std::env::temp_dir().join(format!("coucou-priv-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("hiwings-priv-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -990,22 +990,22 @@ mod tests {
             match k {
                 "GDK_BACKEND" => Some("x11".into()),
                 "GDK_DPI_SCALE" => Some("0.8".into()),
-                "GST_REGISTRY" => Some("/home/u/.cache/coucou/gstreamer-registry.bin".into()),
-                "GST_PLUGIN_SYSTEM_PATH_1_0" => Some("/tmp/.mount_CoucouX/usr/lib/gstreamer-1.0".into()),
+                "GST_REGISTRY" => Some("/home/u/.cache/hiwings/gstreamer-registry.bin".into()),
+                "GST_PLUGIN_SYSTEM_PATH_1_0" => Some("/tmp/.mount_WingsX/usr/lib/gstreamer-1.0".into()),
                 "GST_PLUGIN_SYSTEM_PATH" => Some("/usr/lib/gstreamer-1.0".into()),
                 _ => None,
             }
         };
-        // Coucou forced x11 over the user's wayland, and set the other two itself.
+        // hi-wings forced x11 over the user's wayland, and set the other two itself.
         let inherited = [("GDK_BACKEND", Some(OsString::from("wayland"))), ("GDK_DPI_SCALE", None), ("GST_REGISTRY", None)];
-        let fixes = child_env(&inherited, current, Some(OsStr::new("/tmp/.mount_CoucouX")));
+        let fixes = child_env(&inherited, current, Some(OsStr::new("/tmp/.mount_WingsX")));
         assert_eq!(fixes, vec![
             ("GDK_BACKEND".to_string(), Some(OsString::from("wayland"))),
             ("GDK_DPI_SCALE".to_string(), None),
             ("GST_REGISTRY".to_string(), None),
             ("GST_PLUGIN_SYSTEM_PATH_1_0".to_string(), None),
         ]);
-        // Values the user set and Coucou kept (an explicit GDK_DPI_SCALE) stay.
+        // Values the user set and hi-wings kept (an explicit GDK_DPI_SCALE) stay.
         let kept = [("GDK_BACKEND", Some(OsString::from("x11"))), ("GDK_DPI_SCALE", Some(OsString::from("0.8")))];
         assert!(child_env(&kept, current, None).is_empty());
     }
@@ -1035,7 +1035,7 @@ pub fn prepare_pill_window(win: &WebviewWindow, mode: super::DesktopMode) -> boo
             let ptr = gtk_window_ptr(&gw);
             unsafe {
                 layer::gtk_layer_init_for_window(ptr);
-                layer::gtk_layer_set_namespace(ptr, c"coucou-pill".as_ptr());
+                layer::gtk_layer_set_namespace(ptr, c"hiwings-pill".as_ptr());
                 layer::gtk_layer_set_layer(ptr, layer::LAYER_OVERLAY);
                 layer::gtk_layer_set_anchor(ptr, layer::EDGE_BOTTOM, 1);
                 layer::gtk_layer_set_exclusive_zone(ptr, 0);

@@ -3,12 +3,12 @@
 //
 // Launch: the user's terminal opens in the project with `claude` and the
 // prompt. The prompt is never spliced into a command line:
-// - Linux: it travels in COUCOU_PROMPT, set on the terminal's process, and the
-//   user's login shell runs `claude "$COUCOU_PROMPT"` (as the Mac's script).
+// - Linux: it travels in HIWINGS_PROMPT, set on the terminal's process, and the
+//   user's login shell runs `claude "$HIWINGS_PROMPT"` (as the Mac's script).
 // - Windows: Windows Terminal starts its tabs with a fresh environment, not
 //   wt.exe's (microsoft/terminal#11094), so an environment variable set on
 //   wt.exe never reaches the tab. The prompt goes into a file of ours in the
-//   temp folder instead; PowerShell reads it into $env:COUCOU_PROMPT, deletes
+//   temp folder instead; PowerShell reads it into $env:HIWINGS_PROMPT, deletes
 //   it, and runs claude with that variable. Only the file's path, which we
 //   made, is in the command line.
 // The session then shows in the island like any other, through the hooks.
@@ -60,11 +60,11 @@ pub fn sh_quote(s: &str) -> String {
 }
 
 /// What the terminal runs: the user's login shell (so `claude` is found as in
-/// any terminal), Claude Code with the prompt from COUCOU_PROMPT, then the
+/// any terminal), Claude Code with the prompt from HIWINGS_PROMPT, then the
 /// shell again in the project once Claude Code quits.
 #[cfg_attr(windows, allow(dead_code))]
 pub fn shell_command(shell: &str, has_prompt: bool) -> Vec<String> {
-    let run = if has_prompt { r#"claude "$COUCOU_PROMPT""# } else { "claude" };
+    let run = if has_prompt { r#"claude "$HIWINGS_PROMPT""# } else { "claude" };
     vec![shell.to_string(), "-lic".to_string(), format!("{run}; exec {} -l", sh_quote(shell))]
 }
 
@@ -94,7 +94,7 @@ pub fn linux_candidates(env_terminal: Option<&str>) -> Vec<String> {
 /// The arguments that make `terminal` open a window in `dir` running `command`.
 /// Unknown terminals get the common `-e` (as x-terminal-emulator must take).
 /// konsole and wezterm are asked for a process of their own, so the window
-/// gets this environment (COUCOU_PROMPT) and not the one of a running copy.
+/// gets this environment (HIWINGS_PROMPT) and not the one of a running copy.
 #[cfg_attr(windows, allow(dead_code))]
 pub fn linux_terminal_args(terminal: &str, dir: &str, command: &[String]) -> Vec<String> {
     let name = Path::new(terminal).file_name().and_then(|n| n.to_str()).unwrap_or(terminal);
@@ -117,7 +117,7 @@ pub fn linux_terminal_args(terminal: &str, dir: &str, command: &[String]) -> Vec
 pub fn linux_spawn(terminal: &str, shell: &str, folder: &str, prompt: &str) -> Spawn {
     let prompt = clean_prompt(prompt);
     let command = shell_command(shell, !prompt.is_empty());
-    let env = if prompt.is_empty() { Vec::new() } else { vec![("COUCOU_PROMPT".to_string(), prompt)] };
+    let env = if prompt.is_empty() { Vec::new() } else { vec![("HIWINGS_PROMPT".to_string(), prompt)] };
     Spawn { program: terminal.to_string(), args: linux_terminal_args(terminal, folder, &command), env, dir: folder.to_string() }
 }
 
@@ -138,7 +138,7 @@ pub fn windows_prompt(prompt: &str) -> String {
     clean_prompt(prompt).replace('"', "'")
 }
 
-/// What PowerShell runs. With a prompt: read the file into COUCOU_PROMPT,
+/// What PowerShell runs. With a prompt: read the file into HIWINGS_PROMPT,
 /// delete it, start Claude Code with it. `Get-Command -CommandType
 /// Application` takes claude.exe or claude.cmd, never npm's claude.ps1, which
 /// the default execution policy refuses to run. No double quote and nothing
@@ -151,8 +151,8 @@ pub fn powershell_script(prompt_file: Option<&str>) -> String {
         Some(file) => {
             let f = ps_quote(file);
             format!(
-                "$env:COUCOU_PROMPT = Get-Content -LiteralPath {f} -Raw -Encoding UTF8; \
-                 Remove-Item -LiteralPath {f}; {claude} $env:COUCOU_PROMPT"
+                "$env:HIWINGS_PROMPT = Get-Content -LiteralPath {f} -Raw -Encoding UTF8; \
+                 Remove-Item -LiteralPath {f}; {claude} $env:HIWINGS_PROMPT"
             )
         }
     }
@@ -237,7 +237,7 @@ fn start(spawn: &Spawn, new_console: bool) -> std::io::Result<()> {
     #[cfg(not(windows))]
     {
         let _ = new_console;
-        // Coucou's own GDK settings stay out of the terminal (platform/linux.rs).
+        // hi-wings's own GDK settings stay out of the terminal (platform/linux.rs).
         platform::no_console(&mut cmd);
     }
     for (k, v) in &spawn.env {
@@ -275,7 +275,7 @@ fn launch_here(folder: &str, prompt: &str) -> Result<String, String> {
     } else {
         let mut bytes = [0u8; 8];
         ring::rand::SecureRandom::fill(&ring::rand::SystemRandom::new(), &mut bytes).map_err(|_| "no randomness")?;
-        let name = format!("coucou-prompt-{}.txt", bytes.iter().map(|b| format!("{b:02x}")).collect::<String>());
+        let name = format!("hiwings-prompt-{}.txt", bytes.iter().map(|b| format!("{b:02x}")).collect::<String>());
         let path = std::env::temp_dir().join(name);
         std::fs::write(&path, prompt.as_bytes()).map_err(|e| e.to_string())?;
         // PowerShell deletes it once read; this catches a terminal that never started.
@@ -387,8 +387,8 @@ mod tests {
         assert!(valid_folder(&dir.to_string_lossy()));
         assert!(!valid_folder(""));
         assert!(!valid_folder("relative/path"));
-        assert!(!valid_folder("/no/such/folder/coucou-xyz"));
-        let file = dir.join("coucou-launch-test-file.txt");
+        assert!(!valid_folder("/no/such/folder/hiwings-xyz"));
+        let file = dir.join("hiwings-launch-test-file.txt");
         std::fs::write(&file, "x").unwrap();
         assert!(!valid_folder(&file.to_string_lossy()), "a file is not a folder");
         let _ = std::fs::remove_file(file);
@@ -406,7 +406,7 @@ mod tests {
     fn the_shell_runs_claude_with_the_variable_never_the_prompt() {
         assert_eq!(
             shell_command("/bin/zsh", true),
-            s(&["/bin/zsh", "-lic", r#"claude "$COUCOU_PROMPT"; exec /bin/zsh -l"#])
+            s(&["/bin/zsh", "-lic", r#"claude "$HIWINGS_PROMPT"; exec /bin/zsh -l"#])
         );
         assert_eq!(shell_command("/usr/bin/fish", false), s(&["/usr/bin/fish", "-lic", "claude; exec /usr/bin/fish -l"]));
     }
@@ -448,9 +448,9 @@ mod tests {
         let spawn = linux_spawn("/usr/bin/kitty", "/bin/zsh", "/home/me/p", nasty);
         assert_eq!(spawn.program, "/usr/bin/kitty");
         assert_eq!(spawn.dir, "/home/me/p");
-        assert_eq!(spawn.env, vec![("COUCOU_PROMPT".to_string(), nasty.to_string())]);
+        assert_eq!(spawn.env, vec![("HIWINGS_PROMPT".to_string(), nasty.to_string())]);
         assert!(spawn.args.iter().all(|a| !a.contains("login") && !a.contains("rm -rf")), "{:?}", spawn.args);
-        assert_eq!(spawn.args.last().unwrap(), r#"claude "$COUCOU_PROMPT"; exec /bin/zsh -l"#);
+        assert_eq!(spawn.args.last().unwrap(), r#"claude "$HIWINGS_PROMPT"; exec /bin/zsh -l"#);
 
         let empty = linux_spawn("kitty", "/bin/zsh", "/home/me/p", "  \n ");
         assert!(empty.env.is_empty());
@@ -467,12 +467,12 @@ mod tests {
     #[test]
     fn powershell_reads_the_prompt_from_our_file() {
         assert_eq!(powershell_script(None), "& (Get-Command claude -CommandType Application -TotalCount 1)");
-        let script = powershell_script(Some(r"C:\Temp\coucou-prompt-ab.txt"));
+        let script = powershell_script(Some(r"C:\Temp\hiwings-prompt-ab.txt"));
         assert_eq!(
             script,
-            "$env:COUCOU_PROMPT = Get-Content -LiteralPath 'C:\\Temp\\coucou-prompt-ab.txt' -Raw -Encoding UTF8; \
-             Remove-Item -LiteralPath 'C:\\Temp\\coucou-prompt-ab.txt'; \
-             & (Get-Command claude -CommandType Application -TotalCount 1) $env:COUCOU_PROMPT"
+            "$env:HIWINGS_PROMPT = Get-Content -LiteralPath 'C:\\Temp\\hiwings-prompt-ab.txt' -Raw -Encoding UTF8; \
+             Remove-Item -LiteralPath 'C:\\Temp\\hiwings-prompt-ab.txt'; \
+             & (Get-Command claude -CommandType Application -TotalCount 1) $env:HIWINGS_PROMPT"
         );
         // wt.exe re-joins its arguments in quotes: none may be inside.
         assert!(!script.contains('"'));

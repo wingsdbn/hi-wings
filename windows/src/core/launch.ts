@@ -12,8 +12,8 @@ import { HOST_OS } from "./pills";
 
 export const MAX_PROJECTS = 10;
 
-const PROJECTS_KEY = "coucou.launch.projects";
-const FOLDER_KEY = "coucou.launch.folder";
+const PROJECTS_KEY = "hiwings.launch.projects";
+const FOLDER_KEY = "hiwings.launch.folder";
 
 /** The folder without its trailing separators ("C:\" and "/" stay as they are). */
 export function normalizeFolder(path: string): string {

@@ -1,4 +1,4 @@
-// Draws Mochi into the PNG/ICO set Tauri needs. No dependencies: the icons are
+// Draws Plume into the PNG/ICO set Tauri needs. No dependencies: the icons are
 // rasterised here and encoded with node:zlib, so the app icon stays "drawn in
 // code" like the character itself.
 //
@@ -11,19 +11,46 @@ import { fileURLToPath } from "node:url";
 
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "src-tauri", "icons");
 
-// ── Mochi ─────────────────────────────────────────────────────────────────────
+// ── Plume ─────────────────────────────────────────────────────────────────────
+//
+// Same geometry as src/plume/engine.ts, so the icon is the character: a soft
+// superellipse of exponent 3.6 with a crest pinched into the top, two pill eyes
+// on a sphere, and the three feathers each side folded at rest. The outline is
+// a polygon here rather than an implicit test, because the crest is a
+// deformation of the path and not of the equation.
 
-const BASE_TOP = [255, 250, 245]; // #FFFAF5
-const BASE_BOTTOM = [221, 204, 191]; // #DDCCBF
+const BASE_TOP = [237, 239, 244]; // #EDEFF4
+const BASE_BOTTOM = [194, 200, 212]; // #C2C8D4
 const INK = [26, 20, 18]; // #1A1412
-const RIM = [0, 0, 0];
+const RIM = [97, 107, 125]; // #616B7D — Plume's slate, the engine's RIM
+const WING = [107, 120, 140]; // #6B788C — the engine's WING
 
 const SS = 4; // supersampling factor
 
-/** Superellipse (exponent 2.7) test in body-local coordinates. */
-function insideBody(x, y, rx, ry) {
-  const n = 2.7;
-  return Math.pow(Math.abs(x / rx), n) + Math.pow(Math.abs(y / ry), n) <= 1;
+/** Plume's outline as a polygon, in body-local coordinates. */
+function outline(rx, ry, steps = 128) {
+  const expN = 2.0 / 3.6;
+  const pts = [];
+  for (let i = 0; i < steps; i++) {
+    const a = (i / steps) * Math.PI * 2;
+    const ca = Math.cos(a);
+    const sa = Math.sin(a);
+    const x = rx * (ca >= 0 ? Math.pow(ca, expN) : -Math.pow(-ca, expN));
+    let y = ry * (sa >= 0 ? Math.pow(sa, expN) : -Math.pow(-sa, expN));
+    if (sa < -0.5) y -= ry * 0.14 * ((-sa - 0.5) / 0.5);
+    pts.push([x, y]);
+  }
+  return pts;
+}
+
+function insidePolygon(x, y, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i];
+    const [xj, yj] = pts[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 function insidePill(x, y, w, h) {
@@ -35,16 +62,68 @@ function insidePill(x, y, w, h) {
   return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
 }
 
-function renderMochi(size) {
+/** A feather, as a chain of capsules along the engine's quadratic curve. */
+function insideCapsule(x, y, ax, ay, bx, by, r) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy || 1;
+  const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2));
+  const px = ax + dx * t - x;
+  const py = ay + dy * t - y;
+  return px * px + py * py <= r * r;
+}
+
+/** The six feathers folded (spread 0), mirrored, in body-local coordinates. */
+function feathers(R, rx, ry) {
+  const span = R * 1.05 * 0.86; // spread 0
+  const out = [];
+  for (const side of [-1, 1]) {
+    for (let f = 0; f < 3; f++) {
+      const len = span * (1 - f * 0.15);
+      const angle = -0.58 + f * 0.22;
+      const tipX = len * Math.cos(angle);
+      const tipY = -len * Math.sin(angle);
+      // The engine's quadraticCurveTo, sampled: the droop is what tells a
+      // feather from a whisker.
+      const ctlX = tipX * 0.42;
+      const ctlY = tipY * 0.92 + len * 0.13;
+      const at = (t) => [
+        (1 - t) * (1 - t) * 0 + 2 * (1 - t) * t * ctlX + t * t * tipX,
+        (1 - t) * (1 - t) * 0 + 2 * (1 - t) * t * ctlY + t * t * tipY,
+      ];
+      const steps = 6;
+      for (let s = 0; s < steps; s++) {
+        const [ax, ay] = at(s / steps);
+        const [bx, by] = at((s + 1) / steps);
+        out.push({
+          ax: side * (rx * 0.88 + ax),
+          ay: -ry * 0.16 + ay,
+          bx: side * (rx * 0.88 + bx),
+          by: -ry * 0.16 + by,
+          r: Math.max(0.6, R * 1.05 * 0.86 * 0.075),
+          alpha: 0.92 - f * 0.17,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function renderPlume(size) {
   const px = new Uint8Array(size * size * 4);
-  const R = size * 0.34;
-  const rx = R * 1.14;
-  const ry = R * 0.88;
+  // A touch smaller than the engine's R: the icon has to fit the wings in.
+  const R = size * 0.25;
+  const rx = R * 1.02;
+  const ry = R * 0.98;
   const cx = size / 2;
   const cy = size / 2 + R * 0.06;
-  const rim = R * 0.055; // dark outline so the tray icon reads on light themes
+  const rim = R * 0.05; // the state rim, slate when no state colours it
 
-  // Eyes — same geometry as BotEngine (yaw ±0.37, pitch −0.12)
+  const body = outline(rx, ry);
+  const halo = outline(rx + rim, ry + rim);
+  const wings = feathers(R, rx, ry);
+
+  // Eyes — same geometry as the engine (yaw ±0.37, pitch −0.12)
   const eyeYaw = 0.37;
   const eyePitch = -0.12;
   const cp = Math.cos(eyePitch);
@@ -60,42 +139,51 @@ function renderMochi(size) {
       let bodyHits = 0;
       let rimHits = 0;
       let eyeHits = 0;
+      let wingHits = 0;
+      let wingAlpha = 0;
       for (let sy = 0; sy < SS; sy++) {
         for (let sx = 0; sx < SS; sx++) {
           const px0 = x + (sx + 0.5) / SS - cx;
           const py0 = y + (sy + 0.5) / SS - cy;
-          if (!insideBody(px0, py0, rx + rim, ry + rim)) continue;
+          if (!insidePolygon(px0, py0, halo)) {
+            for (const w of wings) {
+              if (insideCapsule(px0, py0, w.ax, w.ay, w.bx, w.by, w.r)) {
+                wingHits++;
+                wingAlpha = Math.max(wingAlpha, w.alpha);
+                break;
+              }
+            }
+            continue;
+          }
           rimHits++;
-          if (!insideBody(px0, py0, rx, ry)) continue;
+          if (!insidePolygon(px0, py0, body)) continue;
           bodyHits++;
-          if (
-            insidePill(px0 + ex, py0 - ey, ew, eh) ||
-            insidePill(px0 - ex, py0 - ey, ew, eh)
-          ) {
+          if (insidePill(px0 + ex, py0 - ey, ew, eh) || insidePill(px0 - ex, py0 - ey, ew, eh)) {
             eyeHits++;
           }
         }
       }
-      if (rimHits === 0) continue;
-
       const total = SS * SS;
+      if (rimHits === 0 && wingHits === 0) continue;
+
       const rimA = rimHits / total;
       const bodyA = bodyHits / total;
       const eyeA = eyeHits / total;
+      const wingA = (wingHits / total) * wingAlpha;
 
-      // Body gradient: top-right → bottom-left, like the Canvas gradient.
-      const t = Math.min(1, Math.max(0, ((x - cx) * -0.6 + (y - cy) * 0.8) / (2 * ry) + 0.5));
-      const body = [0, 1, 2].map((i) => BASE_TOP[i] + (BASE_BOTTOM[i] - BASE_TOP[i]) * t);
-
-      // rim under body, body over rim, eyes over body
-      let col = RIM.slice();
-      let alpha = rimA;
-      if (bodyA > 0) {
-        col = col.map((c, i) => c * (1 - bodyA / rimA) + body[i] * (bodyA / rimA));
+      let col;
+      let alpha;
+      if (rimA > 0) {
+        // Body gradient: top-right → bottom-left, like the Canvas gradient.
+        const t = Math.min(1, Math.max(0, ((x - cx) * -0.6 + (y - cy) * 0.8) / (2 * ry) + 0.5));
+        const fill = [0, 1, 2].map((i) => BASE_TOP[i] + (BASE_BOTTOM[i] - BASE_TOP[i]) * t);
+        col = RIM.slice();
         alpha = rimA;
-      }
-      if (eyeA > 0) {
-        col = col.map((c, i) => c * (1 - eyeA) + INK[i] * eyeA);
+        if (bodyA > 0) col = col.map((c, i) => c * (1 - bodyA / rimA) + fill[i] * (bodyA / rimA));
+        if (eyeA > 0) col = col.map((c, i) => c * (1 - eyeA) + INK[i] * eyeA);
+      } else {
+        col = WING.slice();
+        alpha = wingA;
       }
 
       const o = (y * size + x) * 4;
@@ -182,7 +270,7 @@ function encodeICO(entries) {
 
 mkdirSync(OUT, { recursive: true });
 
-const png = (size) => encodePNG(size, renderMochi(size));
+const png = (size) => encodePNG(size, renderPlume(size));
 
 const files = {
   "32x32.png": png(32),

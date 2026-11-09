@@ -1,33 +1,47 @@
-# Coucou — name, character and artwork
+# hi-wings — name, character and artwork
 
-Copyright (c) 2026 Louis Raillé. All rights reserved, except as stated below.
+Copyright (c) 2026 David Ngwangwa. All rights reserved, except as stated below.
 
-The [MIT License](LICENSE) covers the **source code** of Coucou. It does **not** cover the brand and the artwork listed here, which remain the property of Louis Raillé:
+The [MIT License](LICENSE) covers the **source code** of hi-wings. It does **not**
+cover the brand and the artwork listed here:
 
-- the names **“Coucou”** and **“Mochi”**;
-- the **Mochi character** — its design, look, expressions and animations as a character;
-- the **app icon** and **menu bar icon** (`NotchBuddy/Assets.xcassets/`);
-- the **sounds** (`NotchBuddy/Resources/sounds/`);
-- the **images, GIFs and videos** in `docs/media/` and `design/`.
-- the copies of these assets anywhere else in this repository, such as the icon and the sounds in `android/app/src/main/res/` and `windows/`.
+- the names **“hi-wings”** and **“Plume”**;
+- the **Plume character** — its silhouette, its crest, its wings, its
+  expressions and its animations as a character;
+- the **app icon** and **tray icon** (`windows/src-tauri/icons/`, drawn by
+  `windows/scripts/gen-icons.mjs`);
+- the **sounds** (`windows/sounds/`, synthesised by
+  `windows/scripts/gen-sounds.mjs`).
 
-## Coucou for Android
+## Where hi-wings comes from
 
-Coucou for Android (`android/`) is part of Coucou and uses the name, Mochi, the icon and the sounds with the author's permission. Its code, and the phone link in `windows/src-tauri/src/phone_link/`, are © Rhytam Biswas under the MIT License ([`android/LICENSE`](android/LICENSE)); the assets stay under this file. The app is free, with no ads and no paid features.
+hi-wings is a fork of [Coucou](https://github.com/Louis-CFM/coucou) by Louis
+Raillé, whose source code is MIT and whose licence invites exactly this:
+
+> If you fork Coucou to ship your own app, that's welcome under the MIT
+> License: just give it **your own name, icon, character and sounds**.
+
+So hi-wings has its own. The name “Coucou”, the Mochi character, Coucou's icon
+and Coucou's 28 recorded sounds remain the property of Louis Raillé and are
+**not** in this repository: none of them was carried over. What was kept is the
+MIT code, Louis Raillé's copyright on it, and the visual grammar that is not
+anyone's property — a soft squircle, eyes on a sphere that follow the cursor,
+breathing, six keyframes, nothing moving at rest.
 
 ## What you can do
 
-- Build and run Coucou from this repository, for yourself, as it is.
+- Build and run hi-wings from this repository, for yourself, as it is.
 - Fork it and contribute back with pull requests.
-- Show, review, write or talk about Coucou (articles, videos, posts), including screenshots and the demo media.
+- Show, review, write or talk about hi-wings, including screenshots.
 
 ## What you can't do without written permission
 
-- Publish or distribute an app, a fork or a derivative work under the name “Coucou” or “Mochi”, or with the Coucou icon, the Mochi character or the Coucou sounds — on the App Store, on GitHub releases, or anywhere else.
-- Use any of these assets commercially, or in a way that suggests your project is Coucou or is made or endorsed by its author.
+- Publish or distribute an app, a fork or a derivative work under the name
+  “hi-wings” or “Plume”, or with the hi-wings icon, the Plume character or the
+  hi-wings sounds.
+- Use any of these assets in a way that suggests your project is hi-wings or is
+  made or endorsed by its author.
 
-If you fork Coucou to ship your own app, that's welcome under the MIT License: just give it **your own name, icon, character and sounds**.
-
-## Questions or permission requests
-
-Open an issue on [GitHub](https://github.com/Louis-CFM/coucou/issues) or write to raillelouis@gmail.com.
+If you fork hi-wings to ship your own app, that's welcome under the MIT
+License: just give it your own name, icon, character and sounds — the same deal
+hi-wings was given.

@@ -1,7 +1,7 @@
 // Island open/close FSM — port of IslandStateMachine.swift.
 // No DOM, no Tauri: it only reports transitions.
 
-export type FsmState = "hidden" | "petit" | "home" | "coucou";
+export type FsmState = "hidden" | "petit" | "home" | "hiwings";
 
 export class IslandStateMachine {
   state: FsmState = "hidden";
@@ -23,9 +23,9 @@ export class IslandStateMachine {
   }
   /** petit → hidden delay, seconds. */
   petitToHiddenDelay = 60;
-  /** coucou → petit once the greeting animation ends (no hover). */
+  /** hiwings → petit once the greeting animation ends (no hover). */
   greetAutoCollapseDelay = 0.6;
-  /** coucou → petit while the mouse hovers the greeting. */
+  /** hiwings → petit while the mouse hovers the greeting. */
   greetHoverCollapseDelay = 10;
   /** An alert waiting for an answer stays open, even when the mouse leaves. */
   pinned = false;
@@ -61,7 +61,7 @@ export class IslandStateMachine {
 
   launch() {
     this.cancelTimers();
-    this.transition("coucou");
+    this.transition("hiwings");
   }
 
   mouseEntered() {
@@ -81,7 +81,7 @@ export class IslandStateMachine {
       case "home":
         this.clear("homeCollapse");
         break;
-      case "coucou":
+      case "hiwings":
         this.scheduleGreetCollapse(this.greetHoverCollapseDelay);
         break;
     }
@@ -98,7 +98,7 @@ export class IslandStateMachine {
       case "home":
         this.scheduleHomeCollapse();
         break;
-      case "coucou":
+      case "hiwings":
         this.clear("greetCollapse");
         this.transition("petit");
         break;
@@ -114,7 +114,7 @@ export class IslandStateMachine {
 
   /** Greeting animation finished (T.end). Doesn't override a running hover timer. */
   greetComplete() {
-    if (this.state !== "coucou") return;
+    if (this.state !== "hiwings") return;
     if (this.greetCollapse == null) this.scheduleGreetCollapse(this.greetAutoCollapseDelay);
   }
 
@@ -201,7 +201,7 @@ export class IslandStateMachine {
     this.clear("greetCollapse");
     this.greetCollapse = window.setTimeout(() => {
       this.greetCollapse = null;
-      if (this.state === "coucou") this.transition("petit");
+      if (this.state === "hiwings") this.transition("petit");
     }, delay * 1000);
   }
 

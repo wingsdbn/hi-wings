@@ -803,7 +803,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "coucou"
+name = "hiwings"
 version = "0.5.9"
 dependencies = [
  "arboard",
@@ -840,7 +840,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "coucou-hook"
+name = "hiwings-hook"
 version = "0.5.9"
 dependencies = [
  "libc",

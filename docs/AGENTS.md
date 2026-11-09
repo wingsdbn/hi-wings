@@ -1,16 +1,16 @@
-# Coucou — third-party agent integration
+# hi-wings — third-party agent integration
 
-Any tool that can write to a Unix domain socket (macOS, Linux) or a named pipe (Windows) can send events to Coucou and have its own pill next to Claude Code.
+Any tool that can write to a Unix domain socket (macOS, Linux) or a named pipe (Windows) can send events to hi-wings and have its own pill next to Claude Code.
 
-## The `coucou_agent` field
+## The `hiwings_agent` field
 
-Add the optional field `coucou_agent` to any hook JSON payload. Coucou will create a pill labelled with the agent name and route all events to it.
+Add the optional field `hiwings_agent` to any hook JSON payload. hi-wings will create a pill labelled with the agent name and route all events to it.
 
 **Validation:** the name must match `^[a-z0-9-]{1,24}$` (lowercase letters, digits and hyphens, 1–24 characters). An absent or invalid name routes the event to the Claude Code pill instead.
 
 ## Hook command (macOS)
 
-Configure your tool to call the Coucou relay with `--agent <your-name>` after the hook executable:
+Configure your tool to call the hi-wings relay with `--agent <your-name>` after the hook executable:
 
 ```json
 {
@@ -22,7 +22,7 @@ Configure your tool to call the Coucou relay with `--agent <your-name>` after th
 }
 ```
 
-The shell wrapper passes `"$@"` to the Python relay, which extracts the agent name and injects it into the payload before forwarding to Coucou.
+The shell wrapper passes `"$@"` to the Python relay, which extracts the agent name and injects it into the payload before forwarding to hi-wings.
 
 ## Hook command (Windows)
 
@@ -32,7 +32,7 @@ Same pattern with the Windows relay:
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "type": "command", "command": "C:\\path\\to\\coucou-hook.exe --agent my-tool" }
+      { "type": "command", "command": "C:\\path\\to\\hiwings-hook.exe --agent my-tool" }
     ]
   }
 }
@@ -40,13 +40,13 @@ Same pattern with the Windows relay:
 
 ## Hook command (Linux)
 
-Same pattern with the Linux relay. Coucou copies the relay to `~/.local/share/coucou/bin/coucou-hook` at startup.
+Same pattern with the Linux relay. hi-wings copies the relay to `~/.local/share/hiwings/bin/hiwings-hook` at startup.
 
 ```json
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "type": "command", "command": "/path/to/coucou-hook --agent my-tool" }
+      { "type": "command", "command": "/path/to/hiwings-hook --agent my-tool" }
     ]
   }
 }
@@ -54,24 +54,24 @@ Same pattern with the Linux relay. Coucou copies the relay to `~/.local/share/co
 
 ## Payload format
 
-The relay adds `coucou_agent` to the JSON it forwards. You can also add it yourself if you talk to the socket directly:
+The relay adds `hiwings_agent` to the JSON it forwards. You can also add it yourself if you talk to the socket directly:
 
 ```json
 {
   "hook_event_name": "UserPromptSubmit",
   "session_id": "my-session-1",
-  "coucou_agent": "my-tool",
+  "hiwings_agent": "my-tool",
   "prompt": "Running task…"
 }
 ```
 
 Send newline-terminated JSON to the socket:
 - **macOS (GitHub build):** `~/Library/Application Support/NotchBuddy/nb.sock`
-- **macOS (App Store build):** `~/Library/Containers/fr.louisraille.Coucou/Data/nb.sock`
-- **Windows:** `\\.\pipe\coucou-<user-SID>`
-- **Linux:** `$XDG_RUNTIME_DIR/coucou.sock` (usually `/run/user/<uid>/coucou.sock`). Only your own user account can connect.
+- **macOS (App Store build):** `~/Library/Containers/com.wingsdbn.hiwings/Data/nb.sock`
+- **Windows:** `\\.\pipe\hiwings-<user-SID>`
+- **Linux:** `$XDG_RUNTIME_DIR/hiwings.sock` (usually `/run/user/<uid>/hiwings.sock`). Only your own user account can connect.
 
-The Mac relay, `nb-hook`, uses another socket when `COUCOU_SOCKET` is set. That is how an agent on a remote machine reaches the Mac through an SSH tunnel: see [`REMOTE.md`](REMOTE.md).
+The Mac relay, `nb-hook`, uses another socket when `HIWINGS_SOCKET` is set. That is how an agent on a remote machine reaches the Mac through an SSH tunnel: see [`REMOTE.md`](REMOTE.md).
 
 ## Supported events
 
@@ -107,16 +107,16 @@ Amp (`agent_amp`) and Hermes (`agent_hermes`) in Settings → Active pills. Curs
 (`agent_codex`, GitHub build only) are there too — their pills can be declared and set as
 the main pill; session support is coming in a future version.
 
-Claude Desktop (`agent_claude-desktop`, every build) is there as well. Claude Code sessions started from the Claude desktop app's Code tab carry `CLAUDE_CODE_ENTRYPOINT=claude-desktop`; the relay tags them `coucou_agent: claude-desktop` on its own (an explicit `--agent` still wins), so nothing extra is installed. Declare the pill to keep it after the session ends; the ↗ button opens the Claude app.
+Claude Desktop (`agent_claude-desktop`, every build) is there as well. Claude Code sessions started from the Claude desktop app's Code tab carry `CLAUDE_CODE_ENTRYPOINT=claude-desktop`; the relay tags them `hiwings_agent: claude-desktop` on its own (an explicit `--agent` still wins), so nothing extra is installed. Declare the pill to keep it after the session ends; the ↗ button opens the Claude app.
 
 ## Real-world examples
 
 ### Gemini CLI (macOS)
 
-Coucou supports Gemini CLI out of the box via **Settings → Gemini CLI → Install hooks**.
+hi-wings supports Gemini CLI out of the box via **Settings → Gemini CLI → Install hooks**.
 The installer writes to `~/.gemini/settings.json` and uses `--agent gemini` so
 Gemini sessions get their own pill. The relay translates Gemini event names to canonical
-Coucou events automatically.
+hi-wings events automatically.
 
 | Gemini CLI event | Canonical event |
 |---|---|
@@ -129,7 +129,7 @@ Coucou events automatically.
 
 ### Antigravity — `agy` (macOS)
 
-Coucou supports Antigravity out of the box via **Settings → Antigravity → Install hooks**.
+hi-wings supports Antigravity out of the box via **Settings → Antigravity → Install hooks**.
 The installer writes to `~/.gemini/config/hooks.json` (timeouts in seconds) and uses
 `--agent antigravity`. The relay translates `toolCall.name` / `conversationId` to the
 island's `tool_name` / `session_id`.
@@ -148,7 +148,7 @@ the relay answers `{"decision":"ask"}` at once, so Antigravity's own rules and p
 
 **Approve commands from the notch** (Settings → Antigravity, off by default). When it is on,
 a `run_command` that none of Antigravity's `command(...)` rules covers waits for the approval
-card instead. Coucou reads those rules from `~/.gemini/antigravity-cli/settings.json`
+card instead. hi-wings reads those rules from `~/.gemini/antigravity-cli/settings.json`
 (`permissions`), `~/.gemini/config/config.json` (`globalPermissionGrants`) and the project in
 `~/.gemini/config/projects/` that holds the session's folder. A command those rules allow or
 deny gets no card: Antigravity applies its rule.
@@ -156,15 +156,15 @@ deny gets no card: Antigravity applies its rule.
 | On the card | The hook prints |
 |---|---|
 | **Allow** | `{"decision":"allow"}` — this one command runs |
-| **Deny** | `{"decision":"deny","reason":"Denied from Coucou"}` |
+| **Deny** | `{"decision":"deny","reason":"Denied from hi-wings"}` |
 | **Reply in terminal** | `{"decision":"ask"}` — Antigravity shows its own prompt (where *Always allow* lives) |
-| No click in 110 s, Coucou closed or hung, card full | `{"decision":"ask"}` |
+| No click in 110 s, hi-wings closed or hung, card full | `{"decision":"ask"}` |
 
-The relay sends the payload tagged `coucou_kind: agy_pre_tool` and reads one line back:
+The relay sends the payload tagged `hiwings_kind: agy_pre_tool` and reads one line back:
 `{"permissionDecision":"ask"}` right away, or `{"pending":true}` once the card is up and then
 the decision. It waits 3 s for the first line and 115 s for the decision; the `PreToolUse`
-hook is installed with a 120 s timeout (hooks written by an older Coucou have 10 s and must be
-installed again before cards show). Coucou cannot see Antigravity's mode (`--mode auto`,
+hook is installed with a 120 s timeout (hooks written by an older hi-wings have 10 s and must be
+installed again before cards show). hi-wings cannot see Antigravity's mode (`--mode auto`,
 Shift+Tab, *Always proceed*), so with the setting on, Auto mode also asks about commands
 Antigravity would have run on its own. Other tools (file edits, URLs, MCP) are left to
 Antigravity.
@@ -172,18 +172,18 @@ Antigravity.
 Windows and Linux do the same (Settings → Agents → Antigravity, same strings, same rule files
 under `%USERPROFILE%\.gemini` or `~/.gemini`, same replies): the rules reader is
 `windows/src-tauri/src/agy_rules.rs` (a port of `AgyPermissionRules.swift` with the same
-tests), the gate `agy_approvals.rs`, and the relay `coucou-hook` reads `ask`, or `pending`
+tests), the gate `agy_approvals.rs`, and the relay `hiwings-hook` reads `ask`, or `pending`
 then `allow` / `deny` / `ask`, from the app. A command longer than the 2,000 characters the
 relay forwards gets no card.
 
 ### GitHub Copilot CLI (macOS)
 
-Coucou supports Copilot CLI out of the box via **Settings → GitHub Copilot CLI Hooks → Install hooks**.
-The installer writes to `~/.copilot/hooks/coucou.json` and uses `--agent copilot`.
+hi-wings supports Copilot CLI out of the box via **Settings → GitHub Copilot CLI Hooks → Install hooks**.
+The installer writes to `~/.copilot/hooks/hiwings.json` and uses `--agent copilot`.
 Copilot CLI uses camelCase event names and `{"bash":"…","timeoutSec":N}` entries.
 Copilot CLI is fail-closed on `permissionRequest`: the relay always outputs valid JSON
 and returns `{"permissionDecision":"ask"}` on timeout so Copilot re-prompts in the terminal.
-Coucou shows a real Allow / Deny card for Copilot approval requests.
+hi-wings shows a real Allow / Deny card for Copilot approval requests.
 
 | Copilot CLI event | Canonical event |
 |---|---|
@@ -198,9 +198,9 @@ Coucou shows a real Allow / Deny card for Copilot approval requests.
 
 ### Muse Code (macOS)
 
-Coucou supports Muse Code out of the box via **Settings → Muse Code Hooks → Install hooks**.
+hi-wings supports Muse Code out of the box via **Settings → Muse Code Hooks → Install hooks**.
 The installer merges into `~/.config/muse/settings.json` and uses `--agent muse`.
-Muse uses PascalCase event names. Coucou shows a real Allow / Deny card for Muse approval requests.
+Muse uses PascalCase event names. hi-wings shows a real Allow / Deny card for Muse approval requests.
 
 | Muse Code event | Canonical event |
 |---|---|
@@ -214,9 +214,9 @@ Muse uses PascalCase event names. Coucou shows a real Allow / Deny card for Muse
 
 ### OpenCode (macOS)
 
-Coucou supports OpenCode via **Settings → OpenCode Plugin → Install plugin**.
-The installer writes a JS plugin to `~/.config/opencode/plugins/coucou.js`.
-The plugin maps OpenCode event types to canonical Coucou names and forwards them fire-and-forget; OpenCode is never blocked.
+hi-wings supports OpenCode via **Settings → OpenCode Plugin → Install plugin**.
+The installer writes a JS plugin to `~/.config/opencode/plugins/hiwings.js`.
+The plugin maps OpenCode event types to canonical hi-wings names and forwards them fire-and-forget; OpenCode is never blocked.
 
 | OpenCode event | Canonical event |
 |---|---|
@@ -230,8 +230,8 @@ The plugin maps OpenCode event types to canonical Coucou names and forwards them
 
 ### Amp (macOS)
 
-Coucou supports Amp via **Settings → Amp Plugin → Install plugin**.
-The installer writes a TypeScript plugin to `~/.config/amp/plugins/coucou.ts`.
+hi-wings supports Amp via **Settings → Amp Plugin → Install plugin**.
+The installer writes a TypeScript plugin to `~/.config/amp/plugins/hiwings.ts`.
 The `tool.call` handler returns `{ action: 'allow' }` so Amp always proceeds; all events are forwarded display-only.
 
 | Amp event | Canonical event |
@@ -244,8 +244,8 @@ The `tool.call` handler returns `{ action: 'allow' }` so Amp always proceeds; al
 
 ### Hermes Agent (macOS)
 
-Coucou supports Hermes via **Settings → Agents → Hermes → Install plugin**.
-The installer writes a Python plugin to `~/.hermes/plugins/coucou/` and enables it in
+hi-wings supports Hermes via **Settings → Agents → Hermes → Install plugin**.
+The installer writes a Python plugin to `~/.hermes/plugins/hiwings/` and enables it in
 `~/.hermes/config.yaml`. The plugin uses `on_session_start` (sends the platform when running
 via the gateway), `post_llm_call` (sends the final response), and a `pre_approval_request`
 observer hook that fires a `⏳ Approval pending in Hermes` step in the notch.
@@ -262,27 +262,27 @@ Every event is fire-and-forget: if the app is closed or unreachable, nothing is 
 ### Any other tool
 
 Follow the generic pattern: call `nb-hook --agent <your-name> <EventName>` (macOS),
-`coucou-hook.exe --agent <your-name> <EventName>` (Windows)
-or `~/.local/share/coucou/bin/coucou-hook --agent <your-name> <EventName>` (Linux)
+`hiwings-hook.exe --agent <your-name> <EventName>` (Windows)
+or `~/.local/share/hiwings/bin/hiwings-hook --agent <your-name> <EventName>` (Linux)
 and let the relay forward the event.
 
 ## Quick test (Linux)
 
-With Coucou running:
+With hi-wings running:
 
 ```sh
-echo '{"hook_event_name":"UserPromptSubmit","session_id":"t1","prompt":"hello","coucou_agent":"demo"}' \
-  | ~/.local/share/coucou/bin/coucou-hook --agent demo
+echo '{"hook_event_name":"UserPromptSubmit","session_id":"t1","prompt":"hello","hiwings_agent":"demo"}' \
+  | ~/.local/share/hiwings/bin/hiwings-hook --agent demo
 ```
 
 A "demo" pill should appear in the island.
 
 ## Quick test (macOS)
 
-With Coucou running:
+With hi-wings running:
 
 ```sh
-echo '{"hook_event_name":"UserPromptSubmit","session_id":"t1","prompt":"hello","coucou_agent":"demo"}' \
+echo '{"hook_event_name":"UserPromptSubmit","session_id":"t1","prompt":"hello","hiwings_agent":"demo"}' \
   | /bin/sh ~/Library/Application\ Support/NotchBuddy/nb-hook --agent demo
 ```
 

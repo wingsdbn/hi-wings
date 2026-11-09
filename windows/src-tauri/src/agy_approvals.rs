@@ -3,11 +3,11 @@
 //
 // Antigravity has no permission-request event: it runs its PreToolUse hook before its own
 // permission check and waits for the hook's `decision`. The relay (hook/src/main.rs) sends
-// that event tagged `coucou_kind: "agy_pre_tool"` and reads one line back:
+// that event tagged `hiwings_kind: "agy_pre_tool"` and reads one line back:
 //   * `ask` at once — this module found no reason for a card, and Antigravity decides;
 //   * or `pending` once the card is up, then `allow`, `deny` or `ask` (pipe.rs).
-// Only a click on Allow ever lets a command run. No click, Reply in terminal, Coucou closed
-// or slow: "ask", and Antigravity shows its own prompt as if Coucou were not there.
+// Only a click on Allow ever lets a command run. No click, Reply in terminal, hi-wings closed
+// or slow: "ask", and Antigravity shows its own prompt as if hi-wings were not there.
 
 use std::path::Path;
 use std::time::Duration;
@@ -20,7 +20,7 @@ use crate::agy_rules::{AgyRules, Verdict};
 use crate::{log, platform, settings, Shared};
 
 /// The PreToolUse hook needs this long (seconds) for a card to wait for a click: the hooks
-/// Coucou wrote before had 10 s and must be installed again (agents.rs writes 120).
+/// hi-wings wrote before had 10 s and must be installed again (agents.rs writes 120).
 pub const HOOK_TIMEOUT: u64 = 120;
 
 /// What the relay tags the PreToolUse events it waits on with.
@@ -37,7 +37,7 @@ pub struct Gate {
 /// covers; None when Antigravity decides on its own. `enabled` is the setting, `home`
 /// holds Antigravity's `.gemini` folder.
 pub fn gate(payload: &Value, enabled: bool, home: &Path) -> Option<Gate> {
-    if !enabled || payload.get("coucou_agent").and_then(Value::as_str) != Some("antigravity") {
+    if !enabled || payload.get("hiwings_agent").and_then(Value::as_str) != Some("antigravity") {
         return None;
     }
     let tool = payload.get("tool_name").and_then(Value::as_str).unwrap_or_default();
@@ -46,7 +46,7 @@ pub fn gate(payload: &Value, enabled: bool, home: &Path) -> Option<Gate> {
     }
     // The relay shortens long strings: a command that was cut is not one to approve
     // without seeing it whole, nor one the rules could read.
-    if payload.get("coucou_command_cut").and_then(Value::as_bool) == Some(true) {
+    if payload.get("hiwings_command_cut").and_then(Value::as_bool) == Some(true) {
         return None;
     }
     let command = payload
@@ -59,7 +59,7 @@ pub fn gate(payload: &Value, enabled: bool, home: &Path) -> Option<Gate> {
     if command.is_empty() {
         return None;
     }
-    // Coucou gives up 10 s before Antigravity stops waiting for the hook.
+    // hi-wings gives up 10 s before Antigravity stops waiting for the hook.
     let timeout = pre_tool_timeout(home).filter(|t| *t >= HOOK_TIMEOUT)?;
     let cwd = payload.get("cwd").and_then(Value::as_str).unwrap_or_default();
     if AgyRules::load(home, cwd).verdict(&command) != Verdict::Unknown {
@@ -68,18 +68,18 @@ pub fn gate(payload: &Value, enabled: bool, home: &Path) -> Option<Gate> {
     Some(Gate { command, wait: Duration::from_secs((timeout - 10).min(110)) })
 }
 
-/// Timeout (seconds) of Coucou's PreToolUse hook in ~/.gemini/config/hooks.json, None if
+/// Timeout (seconds) of hi-wings's PreToolUse hook in ~/.gemini/config/hooks.json, None if
 /// it is not there.
 pub fn pre_tool_timeout(home: &Path) -> Option<u64> {
     let bytes = std::fs::read(home.join(".gemini").join("config").join("hooks.json")).ok()?;
     let bytes = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(&bytes);
     let root: Value = serde_json::from_slice(bytes).ok()?;
-    let groups = root.get("coucou")?.get("PreToolUse")?.as_array()?;
+    let groups = root.get("hiwings")?.get("PreToolUse")?.as_array()?;
     groups
         .iter()
         .filter_map(|g| g.get("hooks").and_then(Value::as_array))
         .flatten()
-        .find(|h| h.get("command").and_then(Value::as_str).is_some_and(|c| c.contains("coucou-hook")))
+        .find(|h| h.get("command").and_then(Value::as_str).is_some_and(|c| c.contains("hiwings-hook")))
         // Antigravity's default when no timeout is written is 30 s.
         .map(|h| h.get("timeout").and_then(Value::as_f64).map_or(30, |t| t.max(0.0) as u64))
 }
@@ -90,8 +90,8 @@ pub fn pre_tool_timeout(home: &Path) -> Option<u64> {
 #[serde(rename_all = "camelCase")]
 pub struct AgyApprovalsStatus {
     pub enabled: bool,
-    /// Coucou's PreToolUse hook gives Antigravity time to wait for a click: hooks
-    /// written by an older Coucou (10 s) must be installed again.
+    /// hi-wings's PreToolUse hook gives Antigravity time to wait for a click: hooks
+    /// written by an older hi-wings (10 s) must be installed again.
     pub hooks_ready: bool,
 }
 
@@ -105,7 +105,7 @@ pub fn agy_approvals_status(shared: State<Shared>) -> AgyApprovalsStatus {
     status(shared.settings.lock().unwrap().agy_approvals_enabled)
 }
 
-/// "Approve commands from the notch". Off by default; only the switch in the Coucou window
+/// "Approve commands from the notch". Off by default; only the switch in the hi-wings window
 /// turns it on, and save_settings keeps what it says.
 #[tauri::command]
 pub fn agy_approvals_set_enabled(
@@ -115,7 +115,7 @@ pub fn agy_approvals_set_enabled(
     enabled: bool,
 ) -> Result<AgyApprovalsStatus, String> {
     if window.label() != crate::HUB_LABEL {
-        return Err("only the Coucou window may change this".into());
+        return Err("only the hi-wings window may change this".into());
     }
     let updated = {
         let mut current = shared.settings.lock().unwrap();
@@ -137,7 +137,7 @@ mod tests {
 
     fn home(name: &str, hooks: Option<&str>) -> std::path::PathBuf {
         let home = std::env::temp_dir().join(format!(
-            "coucou-agy-gate-{name}-{}-{}",
+            "hiwings-agy-gate-{name}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
         ));
@@ -157,11 +157,11 @@ mod tests {
 
     fn hooks(timeout: Option<u64>) -> String {
         let t = timeout.map(|t| format!(r#","timeout":{t}"#)).unwrap_or_default();
-        format!(r#"{{"coucou":{{"PreToolUse":[{{"matcher":"*","hooks":[{{"type":"command","command":"/x/coucou-hook --agent antigravity PreToolUse"{t}}}]}}]}}}}"#)
+        format!(r#"{{"hiwings":{{"PreToolUse":[{{"matcher":"*","hooks":[{{"type":"command","command":"/x/hiwings-hook --agent antigravity PreToolUse"{t}}}]}}]}}}}"#)
     }
 
     fn run(command: &str) -> Value {
-        json!({ "coucou_agent": "antigravity", "coucou_kind": KIND, "tool_name": "run_command",
+        json!({ "hiwings_agent": "antigravity", "hiwings_kind": KIND, "tool_name": "run_command",
                 "tool_input": { "command": command }, "cwd": "/work" })
     }
 
@@ -185,11 +185,11 @@ mod tests {
         let h = home("off", Some(&hooks(Some(120))));
         assert_eq!(gate(&run("npm install"), false, &h), None);
         for (key, value) in [
-            ("coucou_agent", json!("gemini")),
+            ("hiwings_agent", json!("gemini")),
             ("tool_name", json!("write_to_file")),
             ("tool_input", json!({ "command": "   " })),
             ("tool_input", json!({})),
-            ("coucou_command_cut", json!(true)),
+            ("hiwings_command_cut", json!(true)),
         ] {
             let mut p = run("npm install");
             p[key] = value;
@@ -199,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn hooks_from_an_older_coucou_never_wait() {
+    fn hooks_from_an_older_hiwings_never_wait() {
         for (name, hooks_json) in [("old", Some(hooks(Some(10)))), ("default", Some(hooks(None))), ("none", None)] {
             let h = home(name, hooks_json.as_deref());
             assert_eq!(gate(&run("npm install"), true, &h), None, "{name}");

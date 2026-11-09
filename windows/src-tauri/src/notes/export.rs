@@ -49,7 +49,7 @@ fn show(owner: isize, name: &str) -> windows::core::Result<Option<PathBuf>> {
 pub async fn choose_path(owner: isize, name: String) -> Result<Option<PathBuf>, String> {
     let (send, receive) = tokio::sync::oneshot::channel();
     // A dedicated STA avoids inheriting an MTA from a reused blocking worker.
-    std::thread::Builder::new().name("coucou-note-export".into()).spawn(move || {
+    std::thread::Builder::new().name("hiwings-note-export".into()).spawn(move || {
         let _ = send.send(show(owner, &name).map_err(|error| error.to_string()));
     }).map_err(|error| error.to_string())?;
     receive.await.map_err(|error| error.to_string())?
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     fn cancellation_writes_nothing_and_the_selected_file_receives_complete_utf8() {
         assert_eq!(write_selected(None, "cancelled"), Ok(None));
-        let dir = std::env::temp_dir().join(format!("coucou-note-export-{}-{}", std::process::id(), crate::flow::store::now_ms()));
+        let dir = std::env::temp_dir().join(format!("hiwings-note-export-{}-{}", std::process::id(), crate::flow::store::now_ms()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("Chosen destination.md");
         let text = "# Synthetic call\n\nCafé 世界 — verify both audio sources Friday.\n";
