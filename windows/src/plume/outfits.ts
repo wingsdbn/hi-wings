@@ -23,6 +23,13 @@ const EYE_H = 0.27;
 const EYE_SP = 0.37;
 const EYE_P = -0.12;
 
+/**
+ * The states where the wings also beat. Every other state that is not idle
+ * keeps them spread but still — spread and motionless reads as tense, which
+ * is what an error or a question should look like.
+ */
+export const BEATING = new Set(["working", "thinking", "searching", "finished"]);
+
 /** Below this radius the small details (ribs, dots, gems) are left out. */
 const SIMPLIFY_BELOW_R = 16;
 
@@ -909,6 +916,66 @@ function bow(ctx: Ctx, H: Head) {
   ctx.fillStyle = rad(ctx, -s * 0.06, -s * 0.1, 0, s * 0.35, [[0, "#FFB3D9"], [1, "#C2185B"]]);
   ctx.fill();
   ctx.restore();
+}
+
+/**
+ * Plume's wings — small, round, drawn in the same hand as the bunny ears below:
+ * a filled off-white shape with a nearly invisible outline, mirrored on both
+ * sides, everything in multiples of R. They are part of Plume, not an outfit,
+ * so the engine draws them behind the body on every state.
+ *
+ * Two things, kept apart on purpose. `spread` says whether they are OUT: the
+ * engine tweens it, so they unfold when something happens and curl back
+ * against the body at idle instead of just sitting there. `beat` says whether
+ * they also FLAP once out — spread but still reads as tense, which is what we
+ * want for an error or a question.
+ */
+export function wings(ctx: Ctx, H: Head, spread: number, beat: boolean) {
+  const d = Math.max(0, Math.min(1.25, spread));
+  if (d < 0.012) return; // folded away: nothing to draw
+  const R = H.R;
+  const open = Math.min(1, d);
+  const flap = beat ? (Math.sin((performance.now() / 1000) * 6.6) * 0.5 + 0.5) * 0.34 * open : 0;
+  const size = 0.26 + 0.74 * open; // curling up = shrinking to the shoulder
+  const tuck = (1 - open) * 0.62; // and tipping down
+
+  for (const sd of [-1, 1]) {
+    const root = proj(H, [sd * 0.8, -0.06, 0]);
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, d * 1.35);
+    ctx.translate(root.x, root.y);
+    ctx.scale(sd, 1); // mirror; no global rotation
+    ctx.rotate(tuck - flap);
+    ctx.scale(size, size);
+
+    const L = R * 0.72;
+    const Ht = R * 0.44;
+    ctx.beginPath();
+    ctx.moveTo(0, R * 0.1);
+    ctx.quadraticCurveTo(L * 0.34, -Ht * 0.78, L * 0.86, -Ht * 0.62);
+    ctx.quadraticCurveTo(L * 1.04, -Ht * 0.5, L * 0.95, -Ht * 0.28);
+    ctx.quadraticCurveTo(L * 0.8, -Ht * 0.04, L * 0.66, -Ht * 0.16);
+    ctx.quadraticCurveTo(L * 0.62, Ht * 0.3, L * 0.42, Ht * 0.1);
+    ctx.quadraticCurveTo(L * 0.36, Ht * 0.54, L * 0.14, Ht * 0.34);
+    ctx.closePath();
+    ctx.fillStyle = "#F4F6FA"; // Plume's cool off-white, next to her body
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.06)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(0,0,0,0.05)"; // two faint quills
+    ctx.lineWidth = Math.max(0.8, R * 0.016);
+    ctx.lineCap = "round";
+    for (const k of [0, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(L * 0.12, Ht * 0.04 - k * Ht * 0.14);
+      ctx.quadraticCurveTo(L * 0.52, -Ht * 0.42 - k * Ht * 0.12,
+                           L * (0.6 + k * 0.26), -Ht * (0.26 + k * 0.34));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
 }
 
 // ── Bunny ears (always behind the head) ───────────────────────────────────────

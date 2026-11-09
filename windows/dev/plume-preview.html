@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>hi-wings — Plume</title>
+    <style>
+      body { background: #0e0f11; color: #a8adb8; margin: 0; padding: 24px;
+             font: 12px "Cascadia Mono", Consolas, ui-monospace, monospace; }
+      h1 { font-size: 12px; font-weight: 400; letter-spacing: .08em;
+           text-transform: uppercase; color: #5f656f; margin: 0 0 20px; }
+      .grid { display: flex; flex-wrap: wrap; gap: 10px; }
+      figure { margin: 0; text-align: center; background: #141518;
+               border: 1px solid rgba(255,255,255,.08); border-radius: 8px; padding: 6px 6px 2px; }
+      figcaption { padding: 4px 0 6px; letter-spacing: .04em; }
+      canvas { display: block; }
+      .big { margin-bottom: 20px; }
+      p.note { color: #5f656f; max-width: 70ch; line-height: 1.7; margin-top: 20px; }
+    </style>
+  </head>
+  <body>
+    <h1>Plume — le moteur réel, tous ses états</h1>
+    <div class="grid big"><figure><canvas id="big" width="420" height="300"></canvas>
+      <figcaption>suit le curseur · passe d'un état à l'autre</figcaption></figure></div>
+    <div class="grid" id="grid"></div>
+    <p class="note">Les ailes sont immobiles au repos et ne se déploient que sur
+      les états de travail. Le liseré porte la couleur de l'état.</p>
+    <script type="module">
+      import "./tauri-mock.ts";
+      const { BotEngine, BOT_STATES } = await import("/src/plume/engine.ts");
+      const names = Object.keys(BOT_STATES);
+
+      function mount(canvas, state) {
+        const ctx = canvas.getContext("2d");
+        const dpr = window.devicePixelRatio || 1;
+        const w = canvas.width, h = canvas.height;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        ctx.scale(dpr, dpr);
+        const bot = new BotEngine();
+        if (state) bot.setState(state);
+        let last = performance.now();
+        const frame = (now) => {
+          const dt = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          bot.update(dt);
+          ctx.clearRect(0, 0, w, h);
+          bot.draw(ctx, w, h);
+          requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
+        return bot;
+      }
+
+      for (const name of names) {
+        const fig = document.createElement("figure");
+        const c = document.createElement("canvas");
+        c.width = 150; c.height = 130;
+        const cap = document.createElement("figcaption");
+        cap.textContent = name;
+        fig.append(c, cap);
+        document.getElementById("grid").append(fig);
+        mount(c, name);
+      }
+
+      const big = document.getElementById("big");
+      const hero = mount(big, "idle");
+      big.addEventListener("pointermove", (e) => {
+        const r = big.getBoundingClientRect();
+        hero.lookX = Math.max(-1, Math.min(1, (e.clientX - r.left - r.width / 2) / (r.width / 2)));
+        hero.lookY = Math.max(-1, Math.min(1, (e.clientY - r.top - r.height / 2) / (r.height / 2)));
+      });
+      let i = 0;
+      setInterval(() => { i = (i + 1) % names.length; hero.setState(names[i]); }, 2200);
+    </script>
+  </body>
+</html>

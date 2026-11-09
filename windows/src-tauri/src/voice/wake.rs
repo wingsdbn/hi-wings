@@ -27,40 +27,36 @@ fn is_ok(word: &str) -> bool {
     matches!(word, "ok" | "okay" | "oke" | "okey" | "hey")
 }
 
-/// How Parakeet may write "hiwings", in one word. Said with a Brazilian
-/// Portuguese accent it comes out as "cocku" (#813), with a Spanish accent as
-/// "coco" (the Mac's spotter takes "coco" too); the others are the close spellings
-/// of those accents. Not "cool": "okay, cool" is too common to wake on, nor
-/// "gogo": "okay, go go" is something people say.
-fn is_hiwings(word: &str) -> bool {
+/// How speech recognition may write "wings", in one word. The /w/ of "wings"
+/// is the sound non-English speakers move most: a French speaker's comes out
+/// "ouingue", a German or Slavic one's "vings", and the final /ŋz/ is heard as
+/// a plain "s" or dropped. Not "things", "rings" or "kings": they are words
+/// people say, and "OK, things…" must never wake the app.
+fn is_wings(word: &str) -> bool {
     matches!(
         word,
-        "hiwings"
-            | "hiwings"
-            | "cuckoo"
-            | "cucu"
-            | "kuku"
-            | "koukou"
-            | "cookoo"
-            | "coocoo"
-            | "cocou"
-            | "kukuu"
-            | "couscous"
-            | "cocku"
-            | "cocu"
-            | "cuco"
-            | "cuku"
-            | "coku"
-            | "kuko"
-            | "coco"
+        "wings"
+            | "wing"
+            | "wins"
+            | "winx"
+            | "weengs"
+            | "weeng"
+            | "wengs"
+            | "vings"
+            | "ving"
+            | "ouingue"
+            | "ouingues"
+            | "ouing"
+            | "oueingue"
+            | "uings"
     )
 }
 
-/// …or in two.
-fn is_hiwings_pair(a: &str, b: &str) -> bool {
+/// …or in two, when the recogniser splits the plural off or hears two beats.
+fn is_wings_pair(a: &str, b: &str) -> bool {
     matches!(
         (a, b),
-        ("cou", "cou") | ("coo", "coo") | ("ku", "ku") | ("cu", "cu") | ("koo", "koo") | ("cuck", "oo") | ("co", "co")
+        ("wing", "s") | ("ouin", "gue") | ("ou", "ingue") | ("wine", "gs") | ("win", "gs")
     )
 }
 
@@ -82,11 +78,11 @@ pub fn after_wake(text: &str) -> Option<String> {
             // A word made of two ("ok hiwings" written as one token is rare but happens).
             if let Some(w) = norm.get(j) {
                 let parts: Vec<&str> = w.split(' ').collect();
-                if parts.len() == 1 && is_hiwings(parts[0]) {
+                if parts.len() == 1 && is_wings(parts[0]) {
                     return Some(words[j + 1..].join(" ").trim_start_matches([',', '.', '!', ' ']).trim().to_string());
                 }
                 if let Some(next) = norm.get(j + 1) {
-                    if is_hiwings_pair(w, next) {
+                    if is_wings_pair(w, next) {
                         return Some(words[j + 2..].join(" ").trim_start_matches([',', '.', '!', ' ']).trim().to_string());
                     }
                 }
@@ -94,7 +90,7 @@ pub fn after_wake(text: &str) -> Option<String> {
         }
         // "okwings" in one piece.
         if let Some(rest) = norm[i].strip_prefix("okay").or_else(|| norm[i].strip_prefix("ok")) {
-            if is_hiwings(rest.trim()) {
+            if is_wings(rest.trim()) {
                 return Some(words[i + 1..].join(" ").trim().to_string());
             }
         }
@@ -220,25 +216,27 @@ mod tests {
     #[test]
     fn the_wake_phrase_however_parakeet_writes_it() {
         assert_eq!(after_wake("OK Wings, play some music.").as_deref(), Some("play some music."));
-        assert_eq!(after_wake("Okay, hiwings! Quelle heure est-il ?").as_deref(), Some("Quelle heure est-il ?"));
-        assert_eq!(after_wake("O.K. Cuckoo what's the weather").as_deref(), Some("what's the weather"));
-        assert_eq!(after_wake("ok cou cou ajoute Stripe").as_deref(), Some("ajoute Stripe"));
+        assert_eq!(after_wake("Okay, wings! Quelle heure est-il ?").as_deref(), Some("Quelle heure est-il ?"));
+        assert_eq!(after_wake("O.K. Wings what's the weather").as_deref(), Some("what's the weather"));
+        assert_eq!(after_wake("ok wing s ajoute Stripe").as_deref(), Some("ajoute Stripe"));
         assert_eq!(after_wake("OK Wings.").as_deref(), Some(""));
-        assert_eq!(after_wake("Hey hiwings, ça va ?").as_deref(), Some("ça va ?"));
-        // A Brazilian speaker's « OK Wings », as Parakeet wrote it (#813).
-        assert_eq!(after_wake("Okay, cocku.").as_deref(), Some(""));
-        assert_eq!(after_wake("Ok, cocku, que horas são?").as_deref(), Some("que horas são?"));
-        assert_eq!(after_wake("Okay, cuco.").as_deref(), Some(""));
-        // "cool" stays out: it is what people say, not the wake phrase.
+        assert_eq!(after_wake("Hey Wings, ça va ?").as_deref(), Some("ça va ?"));
+        // A French speaker's « OK Wings », as the recogniser wrote it.
+        assert_eq!(after_wake("Okay, ouingue.").as_deref(), Some(""));
+        assert_eq!(after_wake("Ok, ouin gue, quelle heure ?").as_deref(), Some("quelle heure ?"));
+        // A German or Slavic speaker's /v/ for the /w/.
+        assert_eq!(after_wake("Okay, vings, wie spät ist es?").as_deref(), Some("wie spät ist es?"));
+        // The final /ŋz/ heard as a plain s, or dropped.
+        assert_eq!(after_wake("Okay, wins.").as_deref(), Some(""));
+        assert_eq!(after_wake("Okay, wing.").as_deref(), Some(""));
+        // Real words stay out: they are what people say, not the wake phrase.
+        assert_eq!(after_wake("Okay, things."), None);
+        assert_eq!(after_wake("Okay, rings rings."), None);
+        assert_eq!(after_wake("Okay, kings."), None);
         assert_eq!(after_wake("Okay, cool."), None);
-        assert_eq!(after_wake("Okay, cool cool."), None);
-        // A Spanish speaker's « OK Wings », as Parakeet wrote it.
-        assert_eq!(after_wake("Okay, coco.").as_deref(), Some(""));
-        assert_eq!(after_wake("Okay, Co Co, ¿qué hora es?").as_deref(), Some("¿qué hora es?"));
-        // "go go" stays out, and another assistant's wake phrase never wakes hi-wings.
-        assert_eq!(after_wake("Okay, go go."), None);
+        // Another assistant's wake phrase never wakes hi-wings.
         assert_eq!(after_wake("Okay, Google."), None);
-        assert_eq!(after_wake("on a dit hiwings à Paul"), None);
+        assert_eq!(after_wake("on a dit wings à Paul"), None);
         assert_eq!(after_wake("ok let's go"), None);
         assert_eq!(normalize("Ça VA, Élodie ?"), "ca va elodie");
     }

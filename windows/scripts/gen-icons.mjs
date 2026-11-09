@@ -23,7 +23,8 @@ const BASE_TOP = [237, 239, 244]; // #EDEFF4
 const BASE_BOTTOM = [194, 200, 212]; // #C2C8D4
 const INK = [26, 20, 18]; // #1A1412
 const RIM = [97, 107, 125]; // #616B7D — Plume's slate, the engine's RIM
-const WING = [107, 120, 140]; // #6B788C — the engine's WING
+const WING_FILL = [237, 241, 248]; // #EDF1F8 — the wing fill, a shade off the body
+const WING_EDGE = [154, 165, 184]; // #9AA5B8 — its edge, so it reads on white
 
 const SS = 4; // supersampling factor
 
@@ -62,57 +63,53 @@ function insidePill(x, y, w, h) {
   return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
 }
 
-/** A feather, as a chain of capsules along the engine's quadratic curve. */
-function insideCapsule(x, y, ax, ay, bx, by, r) {
-  const dx = bx - ax;
-  const dy = by - ay;
-  const len2 = dx * dx + dy * dy || 1;
-  const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2));
-  const px = ax + dx * t - x;
-  const py = ay + dy * t - y;
-  return px * px + py * py <= r * r;
-}
-
-/** The six feathers folded (spread 0), mirrored, in body-local coordinates. */
-function feathers(R, rx, ry) {
-  const span = R * 1.05 * 0.86; // spread 0
+/** A quadratic segment, flattened into points. */
+function quad(from, ctl, to, steps = 10) {
   const out = [];
-  for (const side of [-1, 1]) {
-    for (let f = 0; f < 3; f++) {
-      const len = span * (1 - f * 0.15);
-      const angle = -0.58 + f * 0.22;
-      const tipX = len * Math.cos(angle);
-      const tipY = -len * Math.sin(angle);
-      // The engine's quadraticCurveTo, sampled: the droop is what tells a
-      // feather from a whisker.
-      const ctlX = tipX * 0.42;
-      const ctlY = tipY * 0.92 + len * 0.13;
-      const at = (t) => [
-        (1 - t) * (1 - t) * 0 + 2 * (1 - t) * t * ctlX + t * t * tipX,
-        (1 - t) * (1 - t) * 0 + 2 * (1 - t) * t * ctlY + t * t * tipY,
-      ];
-      const steps = 6;
-      for (let s = 0; s < steps; s++) {
-        const [ax, ay] = at(s / steps);
-        const [bx, by] = at((s + 1) / steps);
-        out.push({
-          ax: side * (rx * 0.88 + ax),
-          ay: -ry * 0.16 + ay,
-          bx: side * (rx * 0.88 + bx),
-          by: -ry * 0.16 + by,
-          r: Math.max(0.6, R * 1.05 * 0.86 * 0.075),
-          alpha: 0.92 - f * 0.17,
-        });
-      }
-    }
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const u = 1 - t;
+    out.push([
+      u * u * from[0] + 2 * u * t * ctl[0] + t * t * to[0],
+      u * u * from[1] + 2 * u * t * ctl[1] + t * t * to[1],
+    ]);
   }
   return out;
+}
+
+/**
+ * One spread wing as a polygon — the same six curves as `wings()` in
+ * src/plume/outfits.ts, flattened. The icon shows them open: hi-wings is the
+ * name, the wings are the silhouette.
+ */
+function wingOutline(R, rx, ry, side, grow = 1) {
+  const L = R * 0.72;
+  const Ht = R * 0.44;
+  let pts = [[0, R * 0.1]];
+  const seg = (ctl, to) => {
+    pts = pts.concat(quad(pts[pts.length - 1], ctl, to));
+  };
+  seg([L * 0.34, -Ht * 0.78], [L * 0.86, -Ht * 0.62]);
+  seg([L * 1.04, -Ht * 0.5], [L * 0.95, -Ht * 0.28]);
+  seg([L * 0.8, -Ht * 0.04], [L * 0.66, -Ht * 0.16]);
+  seg([L * 0.62, Ht * 0.3], [L * 0.42, Ht * 0.1]);
+  seg([L * 0.36, Ht * 0.54], [L * 0.14, Ht * 0.34]);
+  // Grown about its own middle, this is the outline stroke.
+  const mx = pts.reduce((s, q) => s + q[0], 0) / pts.length;
+  const my = pts.reduce((s, q) => s + q[1], 0) / pts.length;
+  // Root on the body, as proj() places it with the head facing forward.
+  const rootX = side * 0.8 * rx;
+  const rootY = 0.06 * ry;
+  return pts.map(([x, y]) => [
+    rootX + side * (mx + (x - mx) * grow),
+    rootY + my + (y - my) * grow,
+  ]);
 }
 
 function renderPlume(size) {
   const px = new Uint8Array(size * size * 4);
   // A touch smaller than the engine's R: the icon has to fit the wings in.
-  const R = size * 0.25;
+  const R = size * 0.28;
   const rx = R * 1.02;
   const ry = R * 0.98;
   const cx = size / 2;
@@ -121,7 +118,8 @@ function renderPlume(size) {
 
   const body = outline(rx, ry);
   const halo = outline(rx + rim, ry + rim);
-  const wings = feathers(R, rx, ry);
+  const wings = [-1, 1].map((side) => wingOutline(R, rx, ry, side, 1));
+  const wingEdges = [-1, 1].map((side) => wingOutline(R, rx, ry, side, 1.13));
 
   // Eyes — same geometry as the engine (yaw ±0.37, pitch −0.12)
   const eyeYaw = 0.37;
@@ -140,19 +138,14 @@ function renderPlume(size) {
       let rimHits = 0;
       let eyeHits = 0;
       let wingHits = 0;
-      let wingAlpha = 0;
+      let edgeHits = 0;
       for (let sy = 0; sy < SS; sy++) {
         for (let sx = 0; sx < SS; sx++) {
           const px0 = x + (sx + 0.5) / SS - cx;
           const py0 = y + (sy + 0.5) / SS - cy;
           if (!insidePolygon(px0, py0, halo)) {
-            for (const w of wings) {
-              if (insideCapsule(px0, py0, w.ax, w.ay, w.bx, w.by, w.r)) {
-                wingHits++;
-                wingAlpha = Math.max(wingAlpha, w.alpha);
-                break;
-              }
-            }
+            if (wings.some((w) => insidePolygon(px0, py0, w))) wingHits++;
+            else if (wingEdges.some((w) => insidePolygon(px0, py0, w))) edgeHits++;
             continue;
           }
           rimHits++;
@@ -164,12 +157,12 @@ function renderPlume(size) {
         }
       }
       const total = SS * SS;
-      if (rimHits === 0 && wingHits === 0) continue;
+      if (rimHits === 0 && wingHits === 0 && edgeHits === 0) continue;
 
       const rimA = rimHits / total;
       const bodyA = bodyHits / total;
       const eyeA = eyeHits / total;
-      const wingA = (wingHits / total) * wingAlpha;
+      const wingA = (wingHits + edgeHits) / total;
 
       let col;
       let alpha;
@@ -182,7 +175,8 @@ function renderPlume(size) {
         if (bodyA > 0) col = col.map((c, i) => c * (1 - bodyA / rimA) + fill[i] * (bodyA / rimA));
         if (eyeA > 0) col = col.map((c, i) => c * (1 - eyeA) + INK[i] * eyeA);
       } else {
-        col = WING.slice();
+        // The wing's own off-white, edged so it reads on a light background.
+        col = wingHits >= edgeHits ? WING_FILL.slice() : WING_EDGE.slice();
         alpha = wingA;
       }
 

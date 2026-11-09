@@ -7,7 +7,7 @@
 import { Ease, lerp, type EaseFn } from "../core/anim";
 import { Sound } from "../core/sound";
 import type { BotEmoteName, BotStateName } from "../core/layout";
-import { PUMPKIN_BODY, drawOutfitBehind, drawOutfitFront, makeHead } from "./outfits";
+import { BEATING, PUMPKIN_BODY, drawOutfitBehind, drawOutfitFront, makeHead, wings } from "./outfits";
 import type { Outfit } from "./wardrobe";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ interface Tween {
 type PropKey =
   | "yaw" | "pitch" | "roll" | "tilt" | "open" | "sx" | "sy"
   | "oy" | "ox" | "tint" | "morph" | "hands" | "blush" | "es" | "badgeS"
-  | "outfitPresence";
+  | "outfitPresence" | "wingSpread";
 
 interface BotStateCfg {
   color: RGB;
@@ -70,10 +70,9 @@ const EYE_P = -0.12;
 const BASE_TOP: RGB = [0.929, 0.929, 0.937]; // #EDEDEF
 const BASE_BOTTOM: RGB = [0.769, 0.773, 0.792]; // #C4C5CA
 const INK = "rgb(26,20,18)"; // #1A1412
-// Plume's own two: the feathers and the rim when no state colours them.
+// Plume's own: the rim when no state colours it.
 // A mid slate, so a line-drawn wing reads on a dark island and on a light
 // desktop alike — the lesson of design/cw-creature.html.
-const WING: RGB = [0.42, 0.47, 0.55]; // #6B788C
 const RIM: RGB = [0.38, 0.42, 0.49]; // #616B7D
 const MINI_INK = "rgb(16,19,26)"; // #10131A
 
@@ -241,9 +240,8 @@ export class BotEngine {
   dancingLevel = 0;
 
   /**
-   * The wings: 0 folded, 1 spread. They are part of Plume, so they are always
-   * drawn; only the lift and the beat come with work. At rest this is exactly
-   * 0 and nothing about them moves — the island can stop its loop.
+   * The wings: 0 folded against the body, 1 spread. Tweened in setState, so at
+   * rest it is exactly 0 and nothing about them moves.
    */
   wingSpread = 0;
 
@@ -298,6 +296,13 @@ export class BotEngine {
     if (!this.locks.has("tint")) this.tint = this.cfg.tint;
     if (!this.locks.has("tilt")) this.tgTilt = this.cfg.tilt;
     this.setBadge(this.stateBadge());
+
+    // The wings follow what Plume is doing: they unfold as soon as something
+    // happens and curl back against the body when she settles. Opening gets
+    // Ease.back, so they overshoot a little and spring into place; closing is
+    // plain, because a wing that bounces as it folds looks broken.
+    const spread = !this.isMini && next !== "idle" && next !== "sleeping";
+    this.anim("wingSpread", spread ? [[1, 320, Ease.back]] : [[0, 220, Ease.inOut]]);
 
     switch (next) {
       case "finished":
@@ -581,7 +586,7 @@ export class BotEngine {
       this.cfg.bounces || this.cfg.scans || this.cfg.breathes || this.cfg.zz || this.cfg.sweat ||
       this.isMini ||
       this.isDancing || this.dancingLevel > 0.001 ||
-      this.wingSpread > 0 ||
+      (this.wingSpread > 0.01 && BEATING.has(this.state)) ||
       Math.abs(this.tgYaw - this.yaw) > 0.002 ||
       Math.abs(this.tgPitch - this.pitch) > 0.002 ||
       Math.abs(this.tgTilt - this.tilt) > 0.002 ||
@@ -723,13 +728,6 @@ export class BotEngine {
 
     this.dancingLevel = stepDanceLevel(this.dancingLevel, this.isDancing, dt);
 
-    // The wings open on the states that mean work (the tinted ones) and fold
-    // back on idle, finished and sleeping. Mini bots have none: at pill size
-    // three strokes are noise.
-    const wingsOut = !this.isMini && this.cfg.tint > 0.5 && this.morph < 0.5;
-    const nextSpread = this.wingSpread + ((wingsOut ? 1 : 0) - this.wingSpread) * (1 - Math.pow(0.004, dt));
-    this.wingSpread = Math.abs(nextSpread - (wingsOut ? 1 : 0)) < 0.002 ? (wingsOut ? 1 : 0) : nextSpread;
-
     // Soft-part spring: lags behind head turns, hops and rolls (stiffness 60, damping 9).
     if (dt > 0) {
       const yawVel = (this.yaw - this.prevYaw) / dt;
@@ -844,7 +842,12 @@ export class BotEngine {
     const outfitState = { presence: this.outfitPresence, morph: this.morph };
     if (head) drawOutfitBehind(x, this.outfit, head, outfitState);
 
-    this.drawWings(x, R, rx, ry);
+    // The wings are part of Plume, so they are drawn on every state, behind
+   // the body, whether or not she is wearing anything.
+    if (!this.isMini && this.morph < 0.95) {
+      wings(x, head ?? makeHead(R, this.yaw, this.pitch, this.physDx, this.physDy),
+            this.wingSpread * (1 - this.morph), BEATING.has(this.state));
+    }
 
     const body = this.bodyPath(rx, ry, R);
     this.drawBody(x, body, R, rx, ry);
@@ -911,44 +914,6 @@ export class BotEngine {
     }
     p.closePath();
     return p;
-  }
-
-  /**
-   * The three feathers each side, drawn as strokes rather than as a filled
-   * shape: over an unknown desktop a fill makes a blot, a line always reads.
-   * The angle is baked into each feather — a global rotation would flip with
-   * the mirror scale and send the left wing out the wrong side.
-   */
-  private drawWings(x: CanvasRenderingContext2D, R: number, rx: number, ry: number) {
-    if (this.isMini) return;
-    const spread = this.wingSpread * (1 - this.morph);
-    const beat = spread > 0.01 ? (Math.sin((now() - this.t0) * 7.4) * 0.5 + 0.5) * spread : 0;
-    const lift = spread * 0.52 + beat * 0.16;
-    // Folded, the three feathers lie almost on top of each other and sweep
-    // down the side — one swept shape, not three dashes. Spreading fans them.
-    const span = R * 1.05 * (0.86 + 0.14 * spread);
-    x.save();
-    x.lineCap = "round";
-    x.strokeStyle = rgba(mix3(WING, this.col, this.cfg.tint), 1);
-    x.lineWidth = Math.max(1.2, span * 0.15);
-    for (const side of [-1, 1]) {
-      x.save();
-      x.translate(side * rx * 0.88, -ry * 0.16);
-      x.scale(side, 1);
-      for (let f = 0; f < 3; f++) {
-        const len = span * (1 - f * 0.15);
-        const angle = -0.58 + f * 0.22 + lift * 1.7;
-        const tipX = len * Math.cos(angle);
-        const tipY = -len * Math.sin(angle);
-        x.globalAlpha = 0.92 - f * 0.17;
-        x.beginPath();
-        x.moveTo(0, 0);
-        x.quadraticCurveTo(tipX * 0.42, tipY * 0.92 + len * 0.13, tipX, tipY);
-        x.stroke();
-      }
-      x.restore();
-    }
-    x.restore();
   }
 
   /** The state rim: the colour does not decorate, it carries the state. */

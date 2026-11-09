@@ -803,52 +803,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hiwings"
-version = "0.5.9"
-dependencies = [
- "arboard",
- "cpal",
- "dbus",
- "futures-util",
- "gtk",
- "keyring",
- "libc",
- "lopdf",
- "mdns-sd",
- "miniz_oxide 0.8.9",
- "qrcode",
- "rcgen",
- "reqwest 0.12.28",
- "ring",
- "rustls",
- "serde",
- "serde_json",
- "sherpa-onnx",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-single-instance",
- "tokio",
- "tokio-rustls",
- "tokio-tungstenite",
- "webpki-roots 1.0.9",
- "webview2-com",
- "windows 0.61.3",
- "windows-core 0.62.2",
- "x11rb",
-]
-
-[[package]]
-name = "hiwings-hook"
-version = "0.5.9"
-dependencies = [
- "libc",
- "serde_json",
- "windows 0.61.3",
-]
-
-[[package]]
 name = "cpal"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2037,6 +1991,52 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hiwings"
+version = "0.5.9"
+dependencies = [
+ "arboard",
+ "cpal",
+ "dbus",
+ "futures-util",
+ "gtk",
+ "keyring",
+ "libc",
+ "lopdf",
+ "mdns-sd",
+ "miniz_oxide 0.8.9",
+ "qrcode",
+ "rcgen",
+ "reqwest 0.12.28",
+ "ring",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sherpa-onnx",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-single-instance",
+ "tokio",
+ "tokio-rustls",
+ "tokio-tungstenite",
+ "webpki-roots 1.0.9",
+ "webview2-com",
+ "windows 0.61.3",
+ "windows-core 0.62.2",
+ "x11rb",
+]
+
+[[package]]
+name = "hiwings-hook"
+version = "0.5.9"
+dependencies = [
+ "libc",
+ "serde_json",
+ "windows 0.61.3",
+]
 
 [[package]]
 name = "hkdf"
