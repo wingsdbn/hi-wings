@@ -18,8 +18,11 @@ icon or sounds.
   languages); `strings.json` is **generated** from it by
   `scripts/gen-strings.mjs` and is never edited by hand; `extra.json` is the
   hand-written table for strings only this app has.
-- `windows/scripts/` — `gen-icons.mjs` draws the icon, `gen-sounds.mjs`
-  synthesises the 29 sounds, `gen-strings.mjs` builds the string table.
+- `windows/scripts/` — `gen-icons.mjs` draws the icon **and the installer's
+  five images** (NSIS header and sidebar, MSI banner and dialog, the setup
+  icon), `gen-sounds.mjs` synthesises the 29 sounds, `gen-strings.mjs` builds
+  the string table. Change Plume in `src/plume/engine.ts`, mirror the geometry
+  in `gen-icons.mjs`, re-run it, and every image follows.
 - `windows/sounds/` — the 29 generated WAVs. `windows/src-tauri/icons/` — the
   generated icon set. Both are outputs: change the generator, not the file.
 - `docs/AGENTS.md` — the `hiwings_agent` protocol and the named pipe.
@@ -35,6 +38,14 @@ Behind a proxy set `ALL_PROXY` too: `ureq` (Rust) does not read `HTTPS_PROXY`,
 and `sherpa-onnx` downloads during the build. Stop a running hi-wings before
 building, or Cargo cannot replace the executable.
 
+The bundler fetches three tools from GitHub the first time and caches them in
+`%LOCALAPPDATA%\tauri\` — `NSIS\` (nsis-3.11.zip, flattened: the archive
+has a `nsis-3.11/` folder inside), `NSIS\Plugins\x86-unicode\nsis_tauri_utils.dll`
+and `WixTools314\` (wix314-binaries.zip). Their hashes are baked into
+`node_modules/@tauri-apps/cli-win32-x64-msvc/cli.win32-x64-msvc.node`, so a
+hand-placed copy is verified like any other. `TAURI_BUNDLER_TOOLS_GITHUB_MIRROR`
+points them at a mirror.
+
 ## Rules
 - No third-party dependencies unless truly unavoidable. Plume is drawn in code
   (Canvas 2D), no Rive/Lottie/images — and so are the icon and the sounds.
@@ -46,7 +57,9 @@ building, or Cargo cannot replace the executable.
 - Never send an email or approve a permission without an explicit click.
 - 0 % CPU when the island is hidden. Nothing animates at rest.
 - Keep the identifier `com.wingsdbn.hiwings`: the credential manager, the
-  preferences and `%LOCALAPPDATA%\hi-wings` depend on it.
+  preferences and `%LOCALAPPDATA%\hi-wings` depend on it. Changing it makes
+  every install look like a first install — which, among other things, has the
+  app offer to write its hooks into `~/.claude/settings.json` again.
 - Pill IDs are stable contract values: never rename an existing one.
 - Every visible string goes through `t()` and must exist in all 14 languages,
   or `npm test` fails. A new string goes in `extra.json`, by hand, translated.

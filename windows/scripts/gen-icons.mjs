@@ -190,6 +190,77 @@ function renderPlume(size) {
   return px;
 }
 
+// ── Installer artwork (BMP) ───────────────────────────────────────────────────
+//
+// NSIS and WiX both want uncompressed BMPs at fixed sizes, and neither reads a
+// PNG. Plume is composited over a soft vertical wash — no text: the mark is the
+// logo, and hand-rasterising a typeface here would be a worse idea than it
+// sounds.
+
+const WASH_TOP = [255, 255, 255];
+const WASH_BOTTOM = [231, 235, 243]; // #E7EBF3
+
+/** 24-bit bottom-up BMP, rows padded to 4 bytes. */
+function encodeBMP(w, h, rgb) {
+  const rowBytes = w * 3;
+  const pad = (4 - (rowBytes % 4)) % 4;
+  const dataSize = (rowBytes + pad) * h;
+  const out = Buffer.alloc(54 + dataSize);
+  out.write("BM", 0);
+  out.writeUInt32LE(54 + dataSize, 2);
+  out.writeUInt32LE(54, 10);
+  out.writeUInt32LE(40, 14);
+  out.writeInt32LE(w, 18);
+  out.writeInt32LE(h, 22);
+  out.writeUInt16LE(1, 26);
+  out.writeUInt16LE(24, 28);
+  out.writeUInt32LE(dataSize, 34);
+  let o = 54;
+  for (let y = h - 1; y >= 0; y--) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 3;
+      out[o++] = rgb[i + 2]; // BGR
+      out[o++] = rgb[i + 1];
+      out[o++] = rgb[i];
+    }
+    o += pad;
+  }
+  return out;
+}
+
+/** Plume, at `size`, over the wash, with her centre at (cx, cy). */
+function artwork(w, h, size, cx, cy) {
+  const rgb = new Uint8Array(w * h * 3);
+  for (let y = 0; y < h; y++) {
+    const t = h > 1 ? y / (h - 1) : 0;
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 3;
+      for (let c = 0; c < 3; c++) {
+        rgb[i + c] = Math.round(WASH_TOP[c] + (WASH_BOTTOM[c] - WASH_TOP[c]) * t);
+      }
+    }
+  }
+  const sprite = renderPlume(size);
+  const ox = Math.round(cx - size / 2);
+  const oy = Math.round(cy - size / 2);
+  for (let y = 0; y < size; y++) {
+    const dy = oy + y;
+    if (dy < 0 || dy >= h) continue;
+    for (let x = 0; x < size; x++) {
+      const dx = ox + x;
+      if (dx < 0 || dx >= w) continue;
+      const s = (y * size + x) * 4;
+      const a = sprite[s + 3] / 255;
+      if (a <= 0) continue;
+      const d = (dy * w + dx) * 3;
+      for (let c = 0; c < 3; c++) {
+        rgb[d + c] = Math.round(rgb[d + c] * (1 - a) + sprite[s + c] * a);
+      }
+    }
+  }
+  return encodeBMP(w, h, rgb);
+}
+
 // ── PNG ───────────────────────────────────────────────────────────────────────
 
 const CRC_TABLE = (() => {
@@ -280,3 +351,19 @@ for (const [name, data] of Object.entries(files)) {
 const ico = encodeICO([16, 24, 32, 48, 64, 128, 256].map((size) => ({ size, png: png(size) })));
 writeFileSync(join(OUT, "icon.ico"), ico);
 console.log(`icon.ico — ${ico.length} bytes`);
+
+// The installer's own artwork, at the sizes NSIS and WiX insist on.
+const ART = join(OUT, "..", "installer");
+mkdirSync(ART, { recursive: true });
+const bmps = {
+  // NSIS: the strip across the top of every page, and the welcome panel.
+  "nsis-header.bmp": artwork(150, 57, 46, 28, 28),
+  "nsis-sidebar.bmp": artwork(164, 314, 120, 82, 96),
+  // WiX: the same two, at the MSI's sizes.
+  "msi-banner.bmp": artwork(493, 58, 48, 34, 29),
+  "msi-dialog.bmp": artwork(493, 312, 150, 110, 120),
+};
+for (const [name, data] of Object.entries(bmps)) {
+  writeFileSync(join(ART, name), data);
+  console.log(`installer/${name} — ${data.length} bytes`);
+}

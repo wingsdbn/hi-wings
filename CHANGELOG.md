@@ -1,5 +1,40 @@
 # Changelog
 
+## hi-wings
+
+hi-wings was forked from Coucou on 2026-11-09, at the 0.6 development head.
+Everything below the horizontal rule is Coucou's own history, kept as it is:
+it is the history of the code hi-wings inherited, and the names in it are the
+contributors who wrote that code.
+
+### Unreleased — the fork
+
+- **Its own name, character, icon and sounds.** Coucou became hi-wings and
+  Mochi became Plume, in one pass over the whole tree, the 14 languages
+  included. The application identifier is `com.wingsdbn.hiwings`, so settings
+  and keys live under hi-wings in the Windows credential manager; the named
+  pipe is `\\.\pipe\hi-wings-<SID>` and the field other tools add to their
+  hook payload is `hiwings_agent` (see `docs/AGENTS.md`); the folders are
+  `%LOCALAPPDATA%\hi-wings` and `%APPDATA%\hi-wings`; the environment
+  variables are `HIWINGS_*`; the wake phrase is « OK Wings ».
+- **Plume.** A softer, squarer superellipse than the character she is forked
+  from, a crest pinched into the top, and wings: a filled off-white shape each
+  side, folded against the body at rest, opening with a small overshoot when
+  something happens, and beating only while there is work. A rim carries the
+  state's colour. Nothing about her moves at rest.
+- **Drawn and synthesised in code.** The icon is drawn by
+  `windows/scripts/gen-icons.mjs` and the 29 sounds are synthesised by
+  `windows/scripts/gen-sounds.mjs`. hi-wings ships no recorded asset.
+- **Windows and Linux only.** The macOS app, the Android app, the iPhone relay
+  and the Homebrew cask of the original are not part of this repository. The
+  translation catalogue moved to `windows/src/i18n/catalog.xcstrings`.
+- **Updates come from `wingsdbn/hi-wings`**, not from the upstream releases.
+- The coffee link, which was the original author's own, was removed.
+- The speech models are still downloaded on demand from Hugging Face, pinned
+  by commit: the installer stays around 13 MB.
+
+---
+
 ## 0.6.0 — Unreleased
 
 - **Start a Claude Code session from the notch** *(GitHub build)* — the terminal tab in the island's header, or ⌃⌥N: pick the project (the folders your sessions ran in, or any folder), type or dictate what Claude should do, and your terminal opens there with Claude Code and your words. Terminal, iTerm2, Ghostty, kitty, WezTerm and Alacritty; the prompt is never written into a command line
