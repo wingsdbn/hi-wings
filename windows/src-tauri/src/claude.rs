@@ -70,6 +70,15 @@ fn endpoint() -> Result<Url, String> {
         .clone()
 }
 
+/// True when requests go to a gateway instead of Anthropic's own endpoint.
+///
+/// Anthropic's model names mean nothing to another provider: a gateway that
+/// speaks the same wire format still has its own catalogue. Callers that
+/// hard-code a Claude model ask this first and use the configured one instead.
+pub fn on_gateway() -> bool {
+    endpoint().is_ok_and(|url| url.as_str() != DEFAULT_ENDPOINT)
+}
+
 /// The model list endpoint next to the Messages one.
 fn models_endpoint(messages: &Url) -> Url {
     let mut url = messages.clone();

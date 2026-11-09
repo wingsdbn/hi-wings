@@ -56,6 +56,7 @@ export interface FlowPrefs {
   muteOthers: boolean;
   /** One short press of the key starts hands-free dictation, instead of two. */
   oneTapHandsFree: boolean;
+  ask: boolean;
 }
 
 export type ModelState =

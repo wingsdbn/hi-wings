@@ -116,6 +116,11 @@ pub struct Prefs {
     pub voice_gender: String,
     /// One short press of the key starts hands-free dictation, instead of two.
     pub one_tap_hands_free: bool,
+    /// The dictation key asks hi-wings out loud instead of pasting what was
+    /// heard: hold it, say it, let go, and the answer is spoken. The key, the
+    /// microphone and the transcription are dictation's own — only where the
+    /// words go changes.
+    pub ask: bool,
 }
 
 impl Default for Prefs {
@@ -136,6 +141,7 @@ impl Default for Prefs {
             voice_output: "system".into(),
             voice_gender: "female".into(),
             one_tap_hands_free: false,
+            ask: false,
         }
     }
 }

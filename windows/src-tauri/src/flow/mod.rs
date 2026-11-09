@@ -403,6 +403,13 @@ fn process(app: &AppHandle, flow: &Arc<Flow>, samples: &[f32], front: Option<&(S
         pill::update(app, |s| s.phase = "idle".into());
         return Ok(());
     }
+    // Push to talk: the words are a question, not something to paste. Nothing
+    // below applies — no style, no clean-up, no history, no clipboard.
+    if flow.store.lock().unwrap().prefs.ask {
+        pill::update(app, |s| s.phase = "idle".into());
+        crate::voice::ask(app, &raw);
+        return Ok(());
+    }
     let (prepared, style, cleanup, words, key) = {
         let store = flow.store.lock().unwrap();
         let app_id = front.map(|(id, _)| id.as_str());

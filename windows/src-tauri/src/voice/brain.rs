@@ -117,15 +117,22 @@ impl Brain {
             .try_state::<crate::Shared>()
             .map(|s| s.settings.lock().unwrap().model.clone())
             .unwrap_or_default();
+        // On Anthropic: the cheap fast model first, the chat's as a fallback.
+        // On a gateway (HIWINGS_ANTHROPIC_BASE_URL), `claude-haiku-4-5` names
+        // nothing — another provider speaking the same wire format has its own
+        // catalogue. There the configured model goes first, otherwise every
+        // single turn pays for a request that can only fail.
+        let gateway = crate::claude::on_gateway() && !chat_model.is_empty();
+        let (first, second) = if gateway { (chat_model.as_str(), "") } else { (FAST_MODEL, chat_model.as_str()) };
         let mut acted = false;
         let mut spoken = String::new();
         for _ in 0..5 {
             let turn = tauri::async_runtime::block_on(async {
-                match crate::claude::voice_turn(FAST_MODEL, &system, &self.messages, &tools).await {
+                match crate::claude::voice_turn(first, &system, &self.messages, &tools).await {
                     Ok(v) => Ok(v),
-                    Err(err) if !chat_model.is_empty() => {
+                    Err(err) if !second.is_empty() => {
                         crate::log::line(format!("voice: {err}; the chat's model instead"));
-                        crate::claude::voice_turn(&chat_model, &system, &self.messages, &tools).await
+                        crate::claude::voice_turn(second, &system, &self.messages, &tools).await
                     }
                     Err(err) => Err(err),
                 }

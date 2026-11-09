@@ -112,6 +112,51 @@ enum Mode {
     FollowUp { until: Instant },
 }
 
+/// One spoken turn: the question goes to the brain, the answer shows on the
+/// pill and is said out loud. Returns the answer, empty when there was none.
+///
+/// « OK Wings » and push-to-talk differ only in what opens the microphone;
+/// from the question onwards they are the same thing, so they share this.
+fn turn(app: &AppHandle, brain: &mut brain::Brain, question: &str) -> String {
+    show(app, Some(VoiceView { phase: "thinking".into(), heard: question.into(), answer: String::new() }));
+    let reply = brain.respond(app, question);
+    let answer = reply.as_ref().map(|r| r.text.clone()).unwrap_or_default();
+    if answer.is_empty() {
+        let done = reply.is_some_and(|r| r.acted);
+        show(app, Some(VoiceView {
+            phase: "speaking".into(),
+            heard: question.into(),
+            answer: if done { "✓".into() } else { crate::i18n::t("hi-wings couldn't answer: check your Claude key in Notch → Chat.") },
+        }));
+        return String::new();
+    }
+    show(app, Some(VoiceView { phase: "speaking".into(), heard: question.into(), answer: answer.clone() }));
+    speak(app, &answer);
+    answer
+}
+
+/// Asks out loud without the wake phrase: Flow's key was held and let go, and
+/// what it heard comes here instead of being pasted.
+///
+/// « OK Wings » has to keep the 650 MB model resident to hear the phrase in
+/// every burst of speech. A key does not: nothing is loaded and nothing
+/// listens until the moment you press, which is what fits a small machine.
+/// The brain is kept between turns, so a follow-up still has the thread.
+pub fn ask(app: &AppHandle, question: &str) {
+    static BRAIN: OnceLock<Mutex<brain::Brain>> = OnceLock::new();
+    let shared = BRAIN.get_or_init(|| Mutex::new(brain::Brain::default()));
+    let answer = {
+        let mut brain = shared.lock().unwrap();
+        turn(app, &mut brain, question)
+    };
+    let linger = Duration::from_secs(if answer.is_empty() { 5 } else { 6 });
+    let app = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(linger);
+        show(&app, None);
+    });
+}
+
 fn run(app: AppHandle, stop: Arc<AtomicBool>) {
     let mic = crate::flow::get(&app).map(|f| f.store.lock().unwrap().prefs.mic.clone()).unwrap_or_default();
     let (tx, rx) = mpsc::channel::<Vec<f32>>();
@@ -200,21 +245,11 @@ fn run(app: AppHandle, stop: Arc<AtomicBool>) {
             let Some(question) = question else { continue };
             mode = Mode::Wake;
             vad.hangover = 25;
-            show(&app, Some(VoiceView { phase: "thinking".into(), heard: question.clone(), answer: String::new() }));
-            let reply = brain.respond(&app, &question);
-            let answer = reply.as_ref().map(|r| r.text.clone()).unwrap_or_default();
+            let answer = turn(&app, &mut brain, &question);
             if answer.is_empty() {
-                let done = reply.is_some_and(|r| r.acted);
-                show(&app, Some(VoiceView {
-                    phase: "speaking".into(),
-                    heard: question,
-                    answer: if done { "✓".into() } else { crate::i18n::t("hi-wings couldn't answer: check your Claude key in Notch → Chat.") },
-                }));
                 hide_at = Some(Instant::now() + Duration::from_secs(5));
                 continue;
             }
-            show(&app, Some(VoiceView { phase: "speaking".into(), heard: question.clone(), answer: answer.clone() }));
-            speak(&app, &answer);
             vad.reset();
             // Drop what the microphone heard of hi-wings's own voice.
             while rx.try_recv().is_ok() {}
