@@ -7,7 +7,7 @@ Everything below the horizontal rule is Coucou's own history, kept as it is:
 it is the history of the code hi-wings inherited, and the names in it are the
 contributors who wrote that code.
 
-### Unreleased — the fork
+### 0.6.0 — the fork, and hi-wings' first release
 
 - **Its own name, character, icon and sounds.** Coucou became hi-wings and
   Mochi became Plume, in one pass over the whole tree, the 14 languages
