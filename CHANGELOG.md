@@ -7,6 +7,23 @@ Everything below the horizontal rule is Coucou's own history, kept as it is:
 it is the history of the code hi-wings inherited, and the names in it are the
 contributors who wrote that code.
 
+### 0.6.1
+
+- **Hold the dictation key to ask.** A switch in Settings turns dictation's own
+  key into push to talk: hold it, say it, let go, and hi-wings answers out
+  loud instead of pasting what it heard. The key, the microphone, the
+  transcription and the hush are dictation's own — only the destination
+  changes. « OK Wings » has to keep the 650 MB model resident to hear the
+  phrase in every burst of speech; a key does not, so nothing is loaded and
+  nothing listens until you press.
+- **The speech model leaves when it is not used.** Nothing freed it before:
+  turning dictation on loaded it and it stayed for the life of the process.
+  It now arrives on the first key press, while the microphone is already
+  recording, and goes again after five quiet minutes. 704 MB → 31 MB at rest.
+- **One request per turn on a gateway.** With `HIWINGS_ANTHROPIC_BASE_URL`
+  set, the voice brain asks the model you configured instead of a Claude name
+  the gateway cannot know and would refuse.
+
 ### 0.6.0 — the fork, and hi-wings' first release
 
 - **Its own name, character, icon and sounds.** Coucou became hi-wings and
