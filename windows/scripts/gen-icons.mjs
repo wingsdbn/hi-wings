@@ -23,8 +23,8 @@ const BASE_TOP = [237, 239, 244]; // #EDEFF4
 const BASE_BOTTOM = [194, 200, 212]; // #C2C8D4
 const INK = [26, 20, 18]; // #1A1412
 const RIM = [97, 107, 125]; // #616B7D — Plume's slate, the engine's RIM
-const WING_FILL = [237, 241, 248]; // #EDF1F8 — the wing fill, a shade off the body
-const WING_EDGE = [154, 165, 184]; // #9AA5B8 — its edge, so it reads on white
+const WING_FILL = [227, 233, 244]; // #E3E9F4 — the wing fill, a shade off the body
+const WING_EDGE = [97, 107, 125]; // #616B7D — the body's own rim, so the wing reads
 
 const SS = 4; // supersampling factor
 
@@ -119,7 +119,17 @@ function renderPlume(size) {
   const body = outline(rx, ry);
   const halo = outline(rx + rim, ry + rim);
   const wings = [-1, 1].map((side) => wingOutline(R, rx, ry, side, 1));
-  const wingEdges = [-1, 1].map((side) => wingOutline(R, rx, ry, side, 1.13));
+  // The wing's outline has to stay about a pixel wide at EVERY size. Grown by
+  // a fixed ratio it was 8 px at 512 and a third of a pixel at 32, where it
+  // averaged into the white and the wings vanished from the taskbar — the
+  // icon then read as a different creature from the one on the installer.
+  const edgePx = Math.max(1.2, size * 0.018);
+  // Small sizes lose detail, so the wing stops being a pale shape with an
+  // outline and becomes one solid slate mark: what a 16 px tray icon can
+  // actually show. Large sizes keep the pale wing with its quills.
+  const solid = Math.max(0, Math.min(0.8, (72 - size) / 56));
+  const wingFill = WING_FILL.map((c, i) => Math.round(c + (WING_EDGE[i] - c) * solid));
+  const wingEdges = [-1, 1].map((side) => wingOutline(R, rx, ry, side, 1 + edgePx / (R * 0.4)));
 
   // Eyes — same geometry as the engine (yaw ±0.37, pitch −0.12)
   const eyeYaw = 0.37;
@@ -176,7 +186,7 @@ function renderPlume(size) {
         if (eyeA > 0) col = col.map((c, i) => c * (1 - eyeA) + INK[i] * eyeA);
       } else {
         // The wing's own off-white, edged so it reads on a light background.
-        col = wingHits >= edgeHits ? WING_FILL.slice() : WING_EDGE.slice();
+        col = wingHits >= edgeHits ? wingFill.slice() : WING_EDGE.slice();
         alpha = wingA;
       }
 
