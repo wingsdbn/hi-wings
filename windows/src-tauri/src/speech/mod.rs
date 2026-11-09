@@ -271,6 +271,48 @@ fn recognizer_slot() -> &'static Mutex<Option<Arc<OfflineRecognizer>>> {
     R.get_or_init(|| Mutex::new(None))
 }
 
+/// How long the model may sit unused before its 650 MB go back to the system.
+const IDLE_UNLOAD: Duration = Duration::from_secs(5 * 60);
+
+/// When the recognizer was last asked for; None while it is not loaded.
+fn last_used() -> &'static Mutex<Option<Instant>> {
+    static U: OnceLock<Mutex<Option<Instant>>> = OnceLock::new();
+    U.get_or_init(|| Mutex::new(None))
+}
+
+/// Whether the model should go now. Pure, so the rule can be read and tested
+/// without waiting five minutes for it.
+fn should_unload(idle: Option<Duration>, listening: bool, loaded: bool) -> bool {
+    // « OK Wings » listening transcribes every burst of speech: it needs the
+    // model at all times. Dictation and notes are bursts, and can pay a reload.
+    loaded && !listening && idle.is_some_and(|d| d >= IDLE_UNLOAD)
+}
+
+/// Marks the model as in use and, the first time, starts the idle watch.
+///
+/// Parakeet is 650 MB — nearly all of hi-wings' memory. Nothing used to free
+/// it: `preload()` filled the slot and it stayed full for the life of the
+/// process, which on an 8 GB machine is the difference between an assistant
+/// and a swap storm.
+fn touch() {
+    *last_used().lock().unwrap() = Some(Instant::now());
+    static WATCH: std::sync::Once = std::sync::Once::new();
+    WATCH.call_once(|| {
+        std::thread::Builder::new()
+            .name("hiwings-speech-idle".into())
+            .spawn(|| loop {
+                std::thread::sleep(Duration::from_secs(30));
+                let idle = *last_used().lock().unwrap();
+                let loaded = recognizer_slot().lock().unwrap().is_some();
+                if should_unload(idle.map(|t| t.elapsed()), crate::voice::is_listening(), loaded) {
+                    unload();
+                    crate::log::line("speech: model unloaded, idle");
+                }
+            })
+            .ok();
+    });
+}
+
 /// Serialises loading: two callers never load the 650 MB model twice.
 fn load_lock() -> &'static Mutex<()> {
     static L: OnceLock<Mutex<()>> = OnceLock::new();
@@ -283,6 +325,7 @@ fn threads() -> i32 {
 
 /// The loaded recognizer, loading it on first use (about 2 s).
 pub fn recognizer() -> Option<Arc<OfflineRecognizer>> {
+    touch();
     if let Some(r) = recognizer_slot().lock().unwrap().clone() {
         return Some(r);
     }
@@ -322,9 +365,10 @@ pub fn preload() {
     });
 }
 
-/// Frees the model's memory (dictation turned off, models removed).
+/// Frees the model's memory (idle, dictation turned off, models removed).
 pub fn unload() {
     *recognizer_slot().lock().unwrap() = None;
+    *last_used().lock().unwrap() = None;
 }
 
 /// What was said, and each word with its place in the audio.
@@ -454,6 +498,23 @@ mod tests {
 
     fn toks(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn the_model_goes_when_it_has_been_idle_and_nobody_is_listening() {
+        let long = IDLE_UNLOAD + Duration::from_secs(1);
+        let short = Duration::from_secs(5);
+        // Idle long enough, loaded, nobody listening: free the 650 MB.
+        assert!(should_unload(Some(long), false, true));
+        // Just used, or only a moment ago: keep it.
+        assert!(!should_unload(Some(short), false, true));
+        assert!(!should_unload(None, false, true));
+        // Exactly at the threshold counts as idle.
+        assert!(should_unload(Some(IDLE_UNLOAD), false, true));
+        // « OK Wings » listening needs it at every moment, however long the quiet.
+        assert!(!should_unload(Some(long), true, true));
+        // Nothing loaded: nothing to free.
+        assert!(!should_unload(Some(long), false, false));
     }
 
     #[test]

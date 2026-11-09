@@ -175,7 +175,9 @@ fn enable(app: &AppHandle, flow: &Arc<Flow>) {
         .ok();
     *running = Some(Running { tx, _listener: listener });
     drop(running);
-    speech::preload();
+    // No preload here: turning dictation on must not cost 650 MB for a key
+    // that may not be pressed today. The model comes with the first press
+    // (below), while the microphone is already recording.
     pill::update(app, |s| s.enabled = true);
     crate::log::line(format!("flow dictation on ({})", prefs.key.label(&prefs.key_combo)));
 }
@@ -230,7 +232,11 @@ fn run(app: AppHandle, flow: Arc<Flow>, rx: mpsc::Receiver<(KeyEvent, Instant)>)
                 drop(listening.take());
                 break;
             }
-            Some((KeyEvent::Down, at)) => logic.key_down(secs(at)),
+            Some((KeyEvent::Down, at)) => {
+                // Loads in the background while the user speaks; a no-op once loaded.
+                speech::preload();
+                logic.key_down(secs(at))
+            }
             Some((KeyEvent::Up, at)) => {
                 // Read at each release, so a change in the settings needs no restart of the keyboard hook.
                 logic.one_tap = flow.store.lock().unwrap().prefs.one_tap_hands_free;
